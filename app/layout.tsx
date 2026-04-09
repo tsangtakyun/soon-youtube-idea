@@ -31,8 +31,11 @@ function NavBar() {
         SOON YOUTUBE
       </Link>
       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-        <Link href="/" style={{ fontSize: '13px', color: '#1a1a1a', textDecoration: 'none', padding: '6px 14px', borderBottom: '1px solid #1a1a1a', letterSpacing: '0.03em' }}>
+        <Link href="/" style={{ fontSize: '13px', color: '#1a1a1a', textDecoration: 'none', padding: '6px 14px', letterSpacing: '0.03em' }}>
           YouTube Idea Finder
+        </Link>
+        <Link href="/library" style={{ fontSize: '13px', color: '#1a1a1a', textDecoration: 'none', padding: '6px 14px', letterSpacing: '0.03em' }}>
+          Saved Library
         </Link>
         <a href="https://idea-brainstorm.vercel.app" style={{ fontSize: '13px', color: '#888', textDecoration: 'none', padding: '6px 14px', letterSpacing: '0.03em' }}>
           IG 題材庫
