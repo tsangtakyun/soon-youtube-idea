@@ -59,7 +59,7 @@ const modeOptions: Array<{ value: InputMode; label: string; hint: string }> = [
 export default function HomePage() {
   const [mode, setMode] = useState<InputMode>('keyword')
   const [query, setQuery] = useState('')
-  const [language, setLanguage] = useState('en')
+  const [language, setLanguage] = useState('zh-HK')
   const [market, setMarket] = useState('Global')
   const [error, setError] = useState('')
   const [result, setResult] = useState<YoutubeIdeaResult | null>(null)
@@ -268,9 +268,9 @@ export default function HomePage() {
                   onChange={(event) => setLanguage(event.target.value)}
                   style={{ width: '100%', padding: '14px 16px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.06)', color: '#f5f7ff' }}
                 >
-                  <option value="en">English</option>
                   <option value="zh-HK">繁中 / 廣東話</option>
                   <option value="zh-TW">繁中 / 台灣</option>
+                  <option value="en">English</option>
                 </select>
               </label>
               <label style={{ display: 'grid', gap: '8px' }}>
@@ -294,7 +294,7 @@ export default function HomePage() {
               disabled={isPending || !query.trim()}
               style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '999px', background: 'linear-gradient(135deg, #7d6bff 0%, #5f89ff 100%)', color: '#f5f7ff', padding: '14px 18px', border: 'none', cursor: 'pointer', width: 'fit-content', opacity: isPending || !query.trim() ? 0.72 : 1 }}
             >
-              {isPending ? 'AI 生成中...' : '生成 5 張 Idea Cards'}
+              {isPending ? 'AI 生成中...' : '生成 5 張題材卡'}
             </button>
             {error && (
               <div style={{ padding: '14px 16px', borderRadius: '16px', background: 'rgba(200,86,86,0.14)', color: '#ffb3b3', lineHeight: 1.7 }}>{error}</div>
