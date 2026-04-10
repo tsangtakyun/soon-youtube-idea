@@ -4,6 +4,7 @@ export type YoutubeIdeaInputMode = 'keyword' | 'channel_url' | 'video_url'
 
 export type YoutubeIdeaCard = {
   title: string
+  category: 'breaking' | 'culture' | 'rich' | 'poor' | 'evergreen'
   coreAngle: string
   whyNow: string
   audienceFit: string
