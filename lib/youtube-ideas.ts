@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 
+const NL = '\n'
+
 export type YoutubeIdeaInputMode = 'keyword' | 'channel_url' | 'video_url'
 
 export type YoutubeIdeaCard = {
