@@ -122,21 +122,21 @@ export default function HomePage() {
   }
 
   return (
-    <main style={{ minHeight: '100vh', background: 'linear-gradient(180deg, #f6f1e8 0%, #ece3d6 100%)', padding: '42px 24px 90px', color: '#1a1a18' }}>
+    <main style={{ minHeight: '100vh', background: 'radial-gradient(circle at top left, rgba(107,124,255,0.18), transparent 26%), #1d2037', padding: '28px 24px 90px', color: '#eef1ff' }}>
       <div style={{ maxWidth: '1180px', margin: '0 auto', display: 'grid', gap: '20px' }}>
 
         {/* Header */}
         <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.08fr) 0.92fr', gap: '20px' }}>
-          <section style={{ padding: '30px', borderRadius: '28px', background: 'rgba(255,255,255,0.78)', border: '1px solid rgba(26,26,24,0.10)' }}>
-            <p style={{ margin: '0 0 8px', fontSize: '12px', letterSpacing: '0.18em', color: '#8b7c69' }}>SOON · THE INSIDER'S ASIA</p>
-            <h1 style={{ margin: '0 0 12px', fontSize: '56px', lineHeight: 0.98, fontWeight: 500 }}>Idea Radar</h1>
-            <p style={{ margin: '0 0 18px', fontSize: '18px', lineHeight: 1.7, color: '#5b5348', maxWidth: '760px' }}>
+          <section style={{ padding: '30px', borderRadius: '28px', background: 'rgba(42,46,79,0.94)', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 18px 40px rgba(6,9,20,0.32)' }}>
+            <p style={{ margin: '0 0 8px', fontSize: '12px', letterSpacing: '0.18em', color: '#97a0d7' }}>SOON · YOUTUBE INTERNAL TOOL</p>
+            <h1 style={{ margin: '0 0 12px', fontSize: '56px', lineHeight: 0.98, fontWeight: 600 }}>Youtube Idea Reader</h1>
+            <p style={{ margin: '0 0 18px', fontSize: '18px', lineHeight: 1.7, color: '#c7ceef', maxWidth: '760px' }}>
               由香港出發，用英文解釋亞洲嘅荒誕、矛盾、同真實。唔係旅行，係理解。
             </p>
 
             {/* Topic Presets */}
             <div style={{ marginBottom: '16px' }}>
-              <div style={{ fontSize: '12px', letterSpacing: '0.14em', color: '#8b7c69', marginBottom: '10px' }}>TOPIC PRESETS</div>
+              <div style={{ fontSize: '12px', letterSpacing: '0.14em', color: '#97a0d7', marginBottom: '10px' }}>TOPIC PRESETS</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {PRESET_TOPICS.map((preset) => (
                   <button
@@ -145,9 +145,9 @@ export default function HomePage() {
                     onClick={() => handlePreset(preset)}
                     style={{
                       borderRadius: '999px',
-                      border: '1px solid rgba(26,26,24,0.15)',
-                      background: query === preset.query ? '#1a1a18' : '#fff',
-                      color: query === preset.query ? '#f5efe5' : '#1a1a18',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      background: query === preset.query ? 'linear-gradient(135deg, #7d6bff 0%, #5f89ff 100%)' : 'rgba(255,255,255,0.05)',
+                      color: '#f5f7ff',
                       padding: '10px 16px',
                       cursor: 'pointer',
                       fontSize: '14px',
@@ -170,9 +170,9 @@ export default function HomePage() {
                     onClick={() => setMode(option.value)}
                     style={{
                       borderRadius: '999px',
-                      border: selected ? '1px solid #1a1a18' : '1px solid rgba(26,26,24,0.12)',
-                      background: selected ? '#1a1a18' : 'rgba(255,255,255,0.6)',
-                      color: selected ? '#f5efe5' : '#1a1a18',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      background: selected ? 'linear-gradient(135deg, #7d6bff 0%, #5f89ff 100%)' : 'rgba(255,255,255,0.05)',
+                      color: '#eef1ff',
                       padding: '10px 14px',
                       cursor: 'pointer',
                       fontSize: '13px',
@@ -186,36 +186,36 @@ export default function HomePage() {
           </section>
 
           {/* Watchlist */}
-          <section style={{ padding: '26px', borderRadius: '28px', background: '#1d1d1b', color: '#f5f0e6' }}>
+          <section style={{ padding: '26px', borderRadius: '28px', background: 'rgba(32,35,61,0.96)', color: '#f5f7ff', border: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-              <div style={{ fontSize: '12px', letterSpacing: '0.14em', color: '#b8b0a2' }}>WATCHLIST · REFERENCE CHANNELS</div>
+              <div style={{ fontSize: '12px', letterSpacing: '0.14em', color: '#97a0d7' }}>WATCHLIST · REFERENCE CHANNELS</div>
               <button
                 type="button"
                 onClick={() => setShowAddChannel((v) => !v)}
-                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#f5f0e6', borderRadius: '999px', padding: '6px 12px', cursor: 'pointer', fontSize: '12px' }}
+                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.08)', color: '#f5f7ff', borderRadius: '999px', padding: '6px 12px', cursor: 'pointer', fontSize: '12px' }}
               >
                 {showAddChannel ? '✕ 取消' : '+ 新增'}
               </button>
             </div>
 
             {showAddChannel && (
-              <div style={{ display: 'grid', gap: '8px', marginBottom: '14px', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.06)' }}>
+              <div style={{ display: 'grid', gap: '8px', marginBottom: '14px', padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)' }}>
                 <input
                   value={newChannelName}
                   onChange={(e) => setNewChannelName(e.target.value)}
                   placeholder="Channel 名稱"
-                  style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)', color: '#f5f0e6', fontSize: '13px' }}
+                  style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: '#f5f7ff', fontSize: '13px' }}
                 />
                 <input
                   value={newChannelUrl}
                   onChange={(e) => setNewChannelUrl(e.target.value)}
                   placeholder="YouTube Channel URL"
-                  style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)', color: '#f5f0e6', fontSize: '13px' }}
+                  style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: '#f5f7ff', fontSize: '13px' }}
                 />
                 <button
                   type="button"
                   onClick={handleAddChannel}
-                  style={{ padding: '8px 12px', borderRadius: '8px', background: '#f5efe5', color: '#1a1a18', border: 'none', cursor: 'pointer', fontSize: '13px' }}
+                  style={{ padding: '8px 12px', borderRadius: '8px', background: 'linear-gradient(135deg, #7d6bff 0%, #5f89ff 100%)', color: '#f5f7ff', border: 'none', cursor: 'pointer', fontSize: '13px' }}
                 >
                   確認新增
                 </button>
@@ -226,16 +226,16 @@ export default function HomePage() {
               {watchlist.map((ch, index) => (
                 <div
                   key={`${ch.name}-${index}`}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.06)' }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)' }}
                 >
-                  <a href={ch.url} target="_blank" rel="noreferrer" style={{ color: '#f5f0e6', textDecoration: 'none', fontSize: '14px', flex: 1 }}>
+                  <a href={ch.url} target="_blank" rel="noreferrer" style={{ color: '#f5f7ff', textDecoration: 'none', fontSize: '14px', flex: 1 }}>
                     {ch.name}
-                    <span style={{ color: '#b8b0a2', marginLeft: '8px', fontSize: '12px' }}>{ch.subs}</span>
+                    <span style={{ color: '#97a0d7', marginLeft: '8px', fontSize: '12px' }}>{ch.subs}</span>
                   </a>
                   <button
                     type="button"
                     onClick={() => handleRemoveChannel(index)}
-                    style={{ background: 'none', border: 'none', color: '#b8b0a2', cursor: 'pointer', fontSize: '16px', padding: '0 0 0 8px' }}
+                    style={{ background: 'none', border: 'none', color: '#97a0d7', cursor: 'pointer', fontSize: '16px', padding: '0 0 0 8px' }}
                   >
                     ×
                   </button>
@@ -247,26 +247,26 @@ export default function HomePage() {
 
         {/* Input + Reference */}
         <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 0.94fr) 1.06fr', gap: '20px', alignItems: 'start' }}>
-          <section style={{ padding: '24px', borderRadius: '24px', background: 'rgba(255,255,255,0.82)', border: '1px solid rgba(26,26,24,0.10)', display: 'grid', gap: '14px' }}>
-            <div style={{ fontSize: '12px', letterSpacing: '0.16em', color: '#8b7c69' }}>INPUT</div>
+          <section style={{ padding: '24px', borderRadius: '24px', background: 'rgba(42,46,79,0.94)', border: '1px solid rgba(255,255,255,0.08)', display: 'grid', gap: '14px' }}>
+            <div style={{ fontSize: '12px', letterSpacing: '0.16em', color: '#97a0d7' }}>INPUT</div>
             <label style={{ display: 'grid', gap: '8px' }}>
-              <div style={{ fontSize: '15px', color: '#5b5348' }}>
+              <div style={{ fontSize: '15px', color: '#dfe4ff' }}>
                 {mode === 'keyword' ? '關鍵字' : mode === 'channel_url' ? '頻道 URL' : '影片 URL'}
               </div>
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={modeHint}
-                style={{ width: '100%', padding: '14px 16px', borderRadius: '16px', border: '1px solid rgba(26,26,24,0.14)', background: '#fff', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '14px 16px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.06)', boxSizing: 'border-box', color: '#f5f7ff' }}
               />
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <label style={{ display: 'grid', gap: '8px' }}>
-                <div style={{ fontSize: '15px', color: '#5b5348' }}>語言</div>
+                <div style={{ fontSize: '15px', color: '#dfe4ff' }}>語言</div>
                 <select
                   value={language}
                   onChange={(event) => setLanguage(event.target.value)}
-                  style={{ width: '100%', padding: '14px 16px', borderRadius: '16px', border: '1px solid rgba(26,26,24,0.14)', background: '#fff' }}
+                  style={{ width: '100%', padding: '14px 16px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.06)', color: '#f5f7ff' }}
                 >
                   <option value="en">English</option>
                   <option value="zh-HK">繁中 / 廣東話</option>
@@ -274,11 +274,11 @@ export default function HomePage() {
                 </select>
               </label>
               <label style={{ display: 'grid', gap: '8px' }}>
-                <div style={{ fontSize: '15px', color: '#5b5348' }}>市場</div>
+                <div style={{ fontSize: '15px', color: '#dfe4ff' }}>市場</div>
                 <select
                   value={market}
                   onChange={(event) => setMarket(event.target.value)}
-                  style={{ width: '100%', padding: '14px 16px', borderRadius: '16px', border: '1px solid rgba(26,26,24,0.14)', background: '#fff' }}
+                  style={{ width: '100%', padding: '14px 16px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.06)', color: '#f5f7ff' }}
                 >
                   <option value="Global">Global (English)</option>
                   <option value="Southeast Asia">Southeast Asia</option>
@@ -292,18 +292,18 @@ export default function HomePage() {
               type="button"
               onClick={handleGenerate}
               disabled={isPending || !query.trim()}
-              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '999px', background: '#1a1a18', color: '#f5efe5', padding: '14px 18px', border: 'none', cursor: 'pointer', width: 'fit-content', opacity: isPending || !query.trim() ? 0.72 : 1 }}
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '999px', background: 'linear-gradient(135deg, #7d6bff 0%, #5f89ff 100%)', color: '#f5f7ff', padding: '14px 18px', border: 'none', cursor: 'pointer', width: 'fit-content', opacity: isPending || !query.trim() ? 0.72 : 1 }}
             >
               {isPending ? 'AI 生成中...' : '生成 5 張 Idea Cards'}
             </button>
             {error && (
-              <div style={{ padding: '14px 16px', borderRadius: '16px', background: '#fbf1ef', color: '#7d493f', lineHeight: 1.7 }}>{error}</div>
+              <div style={{ padding: '14px 16px', borderRadius: '16px', background: 'rgba(200,86,86,0.14)', color: '#ffb3b3', lineHeight: 1.7 }}>{error}</div>
             )}
           </section>
 
           <section style={{ display: 'grid', gap: '16px' }}>
-            <section style={{ padding: '24px', borderRadius: '24px', background: 'rgba(255,255,255,0.82)', border: '1px solid rgba(26,26,24,0.10)' }}>
-              <div style={{ fontSize: '12px', letterSpacing: '0.16em', color: '#8b7c69', marginBottom: '8px' }}>REFERENCE SIGNALS</div>
+            <section style={{ padding: '24px', borderRadius: '24px', background: 'rgba(42,46,79,0.94)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div style={{ fontSize: '12px', letterSpacing: '0.16em', color: '#97a0d7', marginBottom: '8px' }}>REFERENCE SIGNALS</div>
               {result?.algrowRows?.length ? (
                 <div style={{ display: 'grid', gap: '12px' }}>
                   {result.algrowRows.map((row, index) => {
@@ -311,12 +311,12 @@ export default function HomePage() {
                     const subs = Number(row.subs ?? row.subscriber_count ?? 0)
                     const outlierRatio = subs > 0 ? (views / subs).toFixed(1) : null
                     return (
-                      <div key={`${String(row.title)}-${index}`} style={{ padding: '14px 16px', borderRadius: '16px', background: '#fbf8f1' }}>
+                      <div key={`${String(row.title)}-${index}`} style={{ padding: '14px 16px', borderRadius: '16px', background: 'rgba(255,255,255,0.05)' }}>
                         <div style={{ fontSize: '16px', lineHeight: 1.4 }}>{String(row.title ?? '')}</div>
-                        <div style={{ color: '#7b6d57', lineHeight: 1.7, fontSize: '13px', marginTop: '4px' }}>
+                        <div style={{ color: '#bcc4ee', lineHeight: 1.7, fontSize: '13px', marginTop: '4px' }}>
                           {String(row.channel ?? '')} · {views.toLocaleString()} views
                           {outlierRatio && (
-                            <span style={{ marginLeft: '8px', background: '#1a1a18', color: '#f5efe5', borderRadius: '999px', padding: '2px 8px', fontSize: '11px' }}>
+                            <span style={{ marginLeft: '8px', background: 'rgba(125,107,255,0.18)', color: '#dfe4ff', borderRadius: '999px', padding: '2px 8px', fontSize: '11px', border: '1px solid rgba(125,107,255,0.22)' }}>
                               {outlierRatio}× outlier
                             </span>
                           )}
@@ -326,14 +326,14 @@ export default function HomePage() {
                   })}
                 </div>
               ) : (
-                <div style={{ color: '#7b6d57', lineHeight: 1.7 }}>生成後，這裡會顯示 reference 數據同 Outlier Ratio。</div>
+                <div style={{ color: '#bcc4ee', lineHeight: 1.7 }}>生成後，這裡會顯示 reference 數據同 Outlier Ratio。</div>
               )}
             </section>
 
             {result && (
-              <section style={{ padding: '24px', borderRadius: '24px', background: 'rgba(255,255,255,0.82)', border: '1px solid rgba(26,26,24,0.10)' }}>
-                <div style={{ fontSize: '12px', letterSpacing: '0.16em', color: '#8b7c69', marginBottom: '8px' }}>STATUS</div>
-                <div style={{ padding: '14px 16px', borderRadius: '16px', background: result.saveStatus === 'saved' ? '#edf6ea' : '#f7f1e5', color: result.saveStatus === 'saved' ? '#42623f' : '#7b6d57', lineHeight: 1.7 }}>
+              <section style={{ padding: '24px', borderRadius: '24px', background: 'rgba(42,46,79,0.94)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: '12px', letterSpacing: '0.16em', color: '#97a0d7', marginBottom: '8px' }}>STATUS</div>
+                <div style={{ padding: '14px 16px', borderRadius: '16px', background: result.saveStatus === 'saved' ? 'rgba(98,180,120,0.14)' : 'rgba(255,255,255,0.05)', color: result.saveStatus === 'saved' ? '#b9efc7' : '#bcc4ee', lineHeight: 1.7 }}>
                   {result.saveStatus === 'saved' ? `✓ 已儲存 · ${result.savedIdeaId ?? ''}` : result.saveStatus === 'failed' ? `未能入庫：${result.saveError}` : '生成完成，未設定 Supabase。'}
                 </div>
               </section>
@@ -348,13 +348,13 @@ export default function HomePage() {
             return (
               <section
                 key={`${idea.title}-${index}`}
-                style={{ padding: '24px', borderRadius: '24px', background: 'rgba(255,255,255,0.82)', border: '1px solid rgba(26,26,24,0.10)', display: 'grid', gap: '14px' }}
+                style={{ padding: '24px', borderRadius: '24px', background: 'rgba(42,46,79,0.94)', border: '1px solid rgba(255,255,255,0.08)', display: 'grid', gap: '14px', boxShadow: '0 14px 30px rgba(6,9,20,0.24)' }}
               >
                 <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: '12px' }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                      <div style={{ fontSize: '12px', letterSpacing: '0.16em', color: '#8b7c69' }}>IDEA {index + 1}</div>
-                      <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: '#f0ebe2', color: cat.color, border: `1px solid ${cat.color}40` }}>
+                      <div style={{ fontSize: '12px', letterSpacing: '0.16em', color: '#97a0d7' }}>IDEA {index + 1}</div>
+                      <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.05)', color: '#eef1ff', border: `1px solid ${cat.color}50` }}>
                         {cat.emoji} {cat.label}
                       </span>
                     </div>
@@ -370,15 +370,15 @@ export default function HomePage() {
                     ['需補充資料', idea.backingInfoNeeded.join(' / ')],
                     ['延伸系列', idea.seriesExtensions.join(' / ')],
                   ].map(([label, value]) => (
-                    <div key={label} style={{ padding: '14px 16px', borderRadius: '16px', background: '#fbf8f1', lineHeight: 1.7 }}>
-                      <div style={{ fontSize: '12px', letterSpacing: '0.12em', color: '#8b7c69', marginBottom: '6px' }}>{label}</div>
+                    <div key={label} style={{ padding: '14px 16px', borderRadius: '16px', background: 'rgba(255,255,255,0.05)', lineHeight: 1.7 }}>
+                      <div style={{ fontSize: '12px', letterSpacing: '0.12em', color: '#97a0d7', marginBottom: '6px' }}>{label}</div>
                       <div style={{ fontSize: '14px' }}>{value}</div>
                     </div>
                   ))}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                   {idea.references?.map((url) => (
-                    <a key={url} href={url} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', borderRadius: '999px', background: '#1a1a18', color: '#f5efe5', padding: '10px 14px', textDecoration: 'none', fontSize: '13px' }}>
+                    <a key={url} href={url} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', borderRadius: '999px', background: 'rgba(255,255,255,0.05)', color: '#eef1ff', padding: '10px 14px', textDecoration: 'none', fontSize: '13px', border: '1px solid rgba(255,255,255,0.08)' }}>
                       參考影片 ↗
                     </a>
                   ))}
@@ -386,7 +386,7 @@ export default function HomePage() {
                     href="https://script-generator-xi.vercel.app"
                     target="_blank"
                     rel="noreferrer"
-                    style={{ display: 'inline-flex', alignItems: 'center', borderRadius: '999px', background: '#efe7da', color: '#1a1a18', padding: '10px 14px', textDecoration: 'none', border: '1px solid rgba(26,26,24,0.12)', fontSize: '13px' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', borderRadius: '999px', background: 'linear-gradient(135deg, #7d6bff 0%, #5f89ff 100%)', color: '#f5f7ff', padding: '10px 14px', textDecoration: 'none', border: 'none', fontSize: '13px' }}
                   >
                     → Script Generator
                   </a>
@@ -405,7 +405,7 @@ export default function HomePage() {
                       ].join('\n')
                       navigator.clipboard.writeText(brief)
                     }}
-                    style={{ display: 'inline-flex', alignItems: 'center', borderRadius: '999px', background: '#fff', color: '#1a1a18', padding: '10px 14px', border: '1px solid rgba(26,26,24,0.12)', cursor: 'pointer', fontSize: '13px' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', borderRadius: '999px', background: 'rgba(255,255,255,0.05)', color: '#eef1ff', padding: '10px 14px', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', fontSize: '13px' }}
                   >
                     複製摘要
                   </button>
