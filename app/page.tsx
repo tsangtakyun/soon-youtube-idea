@@ -382,7 +382,7 @@ export default function HomePage() {
                       參考影片 ↗
                     </a>
                   ))}
-                  
+                  <a
                     href="https://script-generator-xi.vercel.app"
                     target="_blank"
                     rel="noreferrer"
