@@ -726,7 +726,7 @@ export default function HomePage() {
 
   const homeRef = useRef<HTMLElement | null>(null)
   const workRef = useRef<HTMLElement | null>(null)
-  const boardRef = useRef<HTMLElement | null>(null)
+  const boardRef = useRef<HTMLDivElement | null>(null)
   const analysisRef = useRef<HTMLElement | null>(null)
 
   const modeHint = useMemo(
