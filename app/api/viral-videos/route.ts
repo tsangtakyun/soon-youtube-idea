@@ -2,11 +2,65 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/supabase'
 
-const REGIONS = [
-  '中國大陸', '香港', '台灣', '日本', '韓國',
-  '泰國', '印尼', '菲律賓', '越南', '馬來西亞',
-  '新加坡', '印度', '其他亞洲', '其他',
-]
+const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3'
+
+async function fetchYouTubeData(videoUrl: string) {
+  const apiKey = process.env.YOUTUBE_API_KEY
+  if (!apiKey) return null
+
+  // 從 URL 提取 video ID
+  const match = videoUrl.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
+  const videoId = match?.[1]
+  if (!videoId) return null
+
+  try {
+    // 拉片數據
+    const videoRes = await fetch(
+      `${YOUTUBE_API_BASE}/videos?part=snippet,statistics,contentDetails&id=${videoId}&key=${apiKey}`
+    )
+    const videoJson = await videoRes.json()
+    const video = videoJson.items?.[0]
+    if (!video) return null
+
+    const channelId = video.snippet?.channelId
+
+    // 拉 channel 數據
+    const channelRes = await fetch(
+      `${YOUTUBE_API_BASE}/channels?part=snippet,statistics&id=${channelId}&key=${apiKey}`
+    )
+    const channelJson = await channelRes.json()
+    const channel = channelJson.items?.[0]
+
+    // 處理 duration（PT16M6S → 16m 6s）
+    const rawDuration = video.contentDetails?.duration ?? ''
+    const durationMatch = rawDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/)
+    let duration = ''
+    if (durationMatch) {
+      const h = durationMatch[1]
+      const m = durationMatch[2]
+      const s = durationMatch[3]
+      if (h) duration += `${h}h `
+      if (m) duration += `${m}m `
+      if (s) duration += `${s}s`
+      duration = duration.trim()
+    }
+
+    return {
+      video_id: videoId,
+      title_original: video.snippet?.title ?? '',
+      views: parseInt(video.statistics?.viewCount ?? '0'),
+      likes: parseInt(video.statistics?.likeCount ?? '0'),
+      comments: parseInt(video.statistics?.commentCount ?? '0'),
+      duration,
+      publish_date: video.snippet?.publishedAt ?? '',
+      channel_name: channel?.snippet?.title ?? video.snippet?.channelTitle ?? '',
+      channel_url: channelId ? `https://www.youtube.com/channel/${channelId}` : '',
+      subscribers: parseInt(channel?.statistics?.subscriberCount ?? '0'),
+    }
+  } catch {
+    return null
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -16,77 +70,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '請輸入 YouTube 影片 URL' }, { status: 400 })
     }
 
+    // Step A: YouTube Data API
+    const ytData = await fetchYouTubeData(videoUrl.trim())
+
+    const videoData = {
+      video_id: ytData?.video_id ?? '',
+      title_original: ytData?.title_original ?? '',
+      views: ytData?.views ?? 0,
+      likes: ytData?.likes ?? 0,
+      comments: ytData?.comments ?? 0,
+      duration: ytData?.duration ?? '',
+      publish_date: ytData?.publish_date ?? '',
+      channel_name: ytData?.channel_name ?? '',
+      channel_url: ytData?.channel_url ?? '',
+      subscribers: ytData?.subscribers ?? 0,
+    }
+
+    // Step B: Claude 翻譯片名 + 分析內容角度
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-    // Step A: Algrow scrape 單條片
-    const algrowKey = process.env.ALGROW_API_KEY
-    const algrowBase = process.env.ALGROW_API_BASE_URL
-
-    let videoData = {
-      title_original: '',
-      views: 0,
-      likes: 0,
-      comments: 0,
-      duration: '',
-      publish_date: '',
-      video_id: '',
-    }
-
-    let channelData = {
-      channel_name: '',
-      channel_url: '',
-      subscribers: 0,
-    }
-
-    if (algrowKey && algrowBase) {
-      try {
-        // 拉片數據
-        const scrapeRes = await fetch(`${algrowBase}/youtube/scrape`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${algrowKey}` },
-          body: JSON.stringify({ url: videoUrl }),
-          cache: 'no-store',
-        })
-        if (scrapeRes.ok) {
-          const scrapeData = await scrapeRes.json()
-          const video = scrapeData?.videos?.[0]
-          if (video) {
-            videoData = {
-              title_original: video.title ?? '',
-              views: video.view_count ?? 0,
-              likes: video.like_count ?? 0,
-              comments: video.comment_count ?? 0,
-              duration: video.duration_human ?? '',
-              publish_date: video.publish_date ?? '',
-              video_id: video.video_id ?? '',
-            }
-          }
-        }
-
-        // 拉 channel 數據
-        const channelRes = await fetch(`${algrowBase}/youtube/search/longform`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${algrowKey}` },
-          body: JSON.stringify({ q: videoUrl }),
-          cache: 'no-store',
-        })
-        if (channelRes.ok) {
-          const channelJson = await channelRes.json()
-          const ch = channelJson?.channels?.[0]
-          if (ch) {
-            channelData = {
-              channel_name: ch.name ?? '',
-              channel_url: ch.url ?? '',
-              subscribers: ch.subscriber_count ?? 0,
-            }
-          }
-        }
-      } catch {
-        // Algrow 失敗唔阻住流程，繼續用空數據
-      }
-    }
-
-    // Step B: Claude 做兩件事 — 翻譯片名 + 分析內容角度
     const aiPrompt = [
       '你係 SOON 內部研究助手，專門分析亞洲 YouTube 爆款內容。',
       '',
@@ -95,7 +97,8 @@ export async function POST(request: Request) {
       `用家描述：${description || '（無）'}`,
       `地區：${region || '（未指定）'}`,
       `Views：${videoData.views.toLocaleString()}`,
-      `Subscribers：${channelData.subscribers.toLocaleString()}`,
+      `Likes：${videoData.likes.toLocaleString()}`,
+      `Subscribers：${videoData.subscribers.toLocaleString()}`,
       '',
       '請輸出 JSON，包含以下兩個欄位：',
       '1. title_zh：將片名翻譯成繁體中文（如原名已是中文則保留，意譯而非直譯，要自然）',
@@ -129,8 +132,8 @@ export async function POST(request: Request) {
     }
 
     // Step C: 計算 outlier_ratio
-    const outlier_ratio = channelData.subscribers > 0
-      ? videoData.views / channelData.subscribers
+    const outlier_ratio = videoData.subscribers > 0
+      ? videoData.views / videoData.subscribers
       : 0
 
     // Step D: 儲落 Supabase
@@ -151,9 +154,9 @@ export async function POST(request: Request) {
         comments: videoData.comments,
         duration: videoData.duration,
         publish_date: videoData.publish_date,
-        channel_name: channelData.channel_name,
-        channel_url: channelData.channel_url,
-        subscribers: channelData.subscribers,
+        channel_name: videoData.channel_name,
+        channel_url: videoData.channel_url,
+        subscribers: videoData.subscribers,
         description: description?.trim() || null,
         region: region || null,
         ai_analysis,
@@ -175,8 +178,8 @@ export async function POST(request: Request) {
       likes: videoData.likes,
       comments: videoData.comments,
       duration: videoData.duration,
-      channel_name: channelData.channel_name,
-      subscribers: channelData.subscribers,
+      channel_name: videoData.channel_name,
+      subscribers: videoData.subscribers,
       outlier_ratio,
       ai_analysis,
     })
