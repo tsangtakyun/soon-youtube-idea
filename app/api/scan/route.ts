@@ -13,6 +13,7 @@ async function searchYouTubeVideos(keyword: string, maxResults = 20) {
       q: keyword,
       type: 'video',
       order: 'viewCount',
+      videoDuration: 'medium',
       maxResults: String(maxResults),
       key: apiKey,
     })
