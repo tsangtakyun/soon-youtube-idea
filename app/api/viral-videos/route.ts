@@ -8,8 +8,6 @@ const REGIONS = [
   '新加坡', '印度', '其他亞洲', '其他',
 ]
 
-export { REGIONS }
-
 export async function POST(request: Request) {
   try {
     const { videoUrl, description, region } = await request.json()
