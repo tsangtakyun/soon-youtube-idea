@@ -697,7 +697,7 @@ export default function HomePage() {
                             )}
                           </div>
                           <div>
-                            
+                            <a
                               href={v.video_url}
                               target="_blank"
                               rel="noreferrer"
