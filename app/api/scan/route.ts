@@ -14,8 +14,6 @@ async function searchYouTubeVideos(keyword: string, maxResults = 20) {
       type: 'video',
       order: 'viewCount',
       maxResults: String(maxResults),
-      regionCode: 'HK',
-      relevanceLanguage: 'zh',
       key: apiKey,
     })
     const res = await fetch(`${YOUTUBE_API_BASE}/search?${params}`)
@@ -79,7 +77,7 @@ async function getChannelSubs(channelIds: string[]) {
   try {
     const unique = [...new Set(channelIds)]
     const params = new URLSearchParams({
-      part: 'statistics,snippet',
+      part: 'statistics',
       id: unique.join(','),
       key: apiKey,
     })
@@ -114,7 +112,6 @@ export async function POST() {
 
   for (const kw of keywords) {
     results.keywords_scanned++
-
     const searchResults = await searchYouTubeVideos(kw.keyword, 20)
     if (!searchResults.length) continue
 
@@ -124,19 +121,14 @@ export async function POST() {
 
     const videoIds = newVideos.map((v: { video_id: string }) => v.video_id)
     const channelIds = newVideos.map((v: { channel_id: string }) => v.channel_id)
+    const [statsMap, channelMap] = await Promise.all([getVideoStats(videoIds), getChannelSubs(channelIds)])
 
-    const [statsMap, channelMap] = await Promise.all([
-      getVideoStats(videoIds),
-      getChannelSubs(channelIds),
-    ])
-
-    const topicVideos: Array<{ title: string; outlier: number; channel: string }> = []
+    const topicVideos: Array<{ title: string; outlier: number; channel: string; video_id: string }> = []
 
     for (const vid of newVideos) {
       const stats = statsMap[vid.video_id]
       const ch = channelMap[vid.channel_id]
       if (!stats || stats.views < 10000) continue
-
       const subs = ch?.subscribers ?? 0
       const outlier_ratio = subs > 0 ? stats.views / subs : 0
       if (outlier_ratio < 1) continue
@@ -153,7 +145,7 @@ export async function POST() {
               '輸出 JSON：{"title_zh": "片名繁體中文意譯", "ai_analysis": "內容角度分析 60字以內繁中"}',
               `片名：${vid.title}`,
               `Views：${stats.views}，Subs：${subs}，Outlier：${outlier_ratio.toFixed(1)}x`,
-            ].join(NL),
+            ].join('\n'),
           }],
         })
         const raw = aiRes.content.map((p) => ('text' in p ? p.text : '')).join('').trim()
@@ -188,27 +180,27 @@ export async function POST() {
       if (!error) {
         results.videos_saved++
         existingIds.add(vid.video_id)
-        topicVideos.push({ title: vid.title, outlier: outlier_ratio, channel: vid.channel_name })
+        topicVideos.push({ title: vid.title, outlier: outlier_ratio, channel: vid.channel_name, video_id: vid.video_id })
       }
     }
 
     if (topicVideos.length >= 2) {
       try {
-        const prompt = [
+        const topicPrompt = [
           '你係 SOON 內部研究助手。',
           `搜尋關鍵字：${kw.keyword}`,
           '以下係搜尋到喅爆款片：',
           ...topicVideos.map((v, i) => `${i + 1}. ${v.title} | ${v.channel} | ${v.outlier.toFixed(1)}x`),
           '',
-          '請分析呢批片的共同話題，輸出 JSON：',
-          '{"topic_zh": "話題名稱繁中", "topic_en": "Topic in English", "ai_analysis": "點解爆 80字以內繁中", "soon_angle": "SOON 可以点切入角度 50字繁中"}',
-          '只輸出 JSON，岇其他文字。',
-        ].join(NL)
+          '請分析呢批片喅共同話題，輸出 JSON：',
+          '{"topic_zh": "話題名稱繁中", "topic_en": "Topic in English", "ai_analysis": "點解爆 80字以內繁中", "soon_angle": "SOON 可以點切入角度 50字繁中"}',
+          '只輸出 JSON。',
+        ].join('\n')
 
         const aiRes = await anthropic.messages.create({
           model: 'claude-sonnet-4-6',
           max_tokens: 400,
-          messages: [{ role: 'user', content: prompt }],
+          messages: [{ role: 'user', content: topicPrompt }],
         })
         const raw = aiRes.content.map((p) => ('text' in p ? p.text : '')).join('').trim()
         const s = raw.indexOf('{')
@@ -224,7 +216,7 @@ export async function POST() {
               signal_count: topicVideos.length,
               max_outlier_ratio: Math.max(...ratios),
               avg_outlier_ratio: ratios.reduce((a, b) => a + b, 0) / ratios.length,
-              related_video_urls: topicVideos.map((_, i) => `https://www.youtube.com/watch?v=${newVideos[i]?.video_id ?? ''}`).filter(Boolean).slice(0, 10),
+              related_video_urls: topicVideos.map((v) => `https://www.youtube.com/watch?v=${v.video_id}`).slice(0, 10),
               related_channels: [...new Set(topicVideos.map((v) => v.channel))],
               ai_analysis: topic.ai_analysis,
               soon_angle: topic.soon_angle,
