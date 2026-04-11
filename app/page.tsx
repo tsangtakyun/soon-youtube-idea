@@ -1,1127 +1,720 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { useEffect, useState } from 'react'
 
-type InputMode = 'keyword' | 'channel_url' | 'video_url'
-type TopicCategory = 'breaking' | 'culture' | 'rich' | 'poor' | 'evergreen'
-type NavKey = 'home' | 'work' | 'board' | 'analysis'
-
-const CATEGORY_META: Record<TopicCategory, { emoji: string; label: string; color: string }> = {
-  breaking: { emoji: '🔴', label: 'Breaking', color: '#ff8b7c' },
-  culture: { emoji: '🟡', label: 'Culture', color: '#ffe07c' },
-  rich: { emoji: '🟠', label: 'Rich', color: '#ffbc7c' },
-  poor: { emoji: '🟤', label: 'Poor', color: '#d8a57d' },
-  evergreen: { emoji: '⚪', label: 'Evergreen', color: '#d9def6' },
+type ViralVideo = {
+  id: string
+  created_at: string
+  video_url: string
+  video_id: string
+  title_original: string
+  title_zh: string
+  views: number
+  likes: number
+  comments: number
+  duration: string
+  publish_date: string
+  channel_name: string
+  channel_url: string
+  subscribers: number
+  description: string | null
+  region: string | null
+  ai_analysis: string | null
+  outlier_ratio: number
 }
 
-type IdeaCard = {
-  title: string
-  category: TopicCategory
-  coreAngle: string
-  whyNow: string
-  audienceFit: string
-  breakoutPattern: string
-  backingInfoNeeded: string[]
-  seriesExtensions: string[]
-  references: string[]
-}
-
-type YoutubeIdeaResult = {
-  ideas: IdeaCard[]
-  algrowRows: Array<Record<string, unknown>>
-  savedIdeaId: string | null
-  saveStatus: 'saved' | 'skipped' | 'failed'
-  saveError: string
-}
-
-const PRESET_TOPICS: Array<{ label: string; query: string; category: TopicCategory }> = [
-  { label: '🏯 East Asia', query: 'China Japan Korea culture society analysis viral', category: 'culture' },
-  { label: '🌴 Southeast Asia', query: 'Southeast Asia Indonesia Thailand Philippines Vietnam society culture', category: 'poor' },
-  { label: '💎 Rich Asia', query: 'Asia luxury wealth rich lifestyle society inequality', category: 'rich' },
-  { label: '🏚️ Poor Asia', query: 'Asia poverty survival developing country real life', category: 'poor' },
-  { label: '🌿 Evergreen', query: 'Asia culture explained insider analysis deep dive', category: 'evergreen' },
+const REGIONS = [
+  '中國大陸', '香港', '台灣', '日本', '韓國',
+  '泰國', '印尼', '菲律賓', '越南', '馬來西亞',
+  '新加坡', '印度', '其他亞洲', '其他',
 ]
 
-const DEFAULT_WATCHLIST = [
-  { name: 'Wonny', url: 'https://www.youtube.com/channel/UCjz8uBTLs0f7Fnlxc5nzT5g', subs: '145K' },
-  { name: 'Dumanity', url: 'https://www.youtube.com/channel/UCLzrP1E-I3kILtq437gdLpA', subs: '113K' },
-  { name: 'Dr. Jonathan Tam', url: 'https://www.youtube.com/channel/UCcc_LE8kzIzcloTVAttch5w', subs: '24.9K' },
-  { name: 'klaize', url: 'https://www.youtube.com/channel/UC_s-lNUAIWateazelbIX60Q', subs: '58.6K' },
-  { name: 'aini', url: 'https://www.youtube.com/channel/UCxxw51w9d_utTp0VNyyG9IA', subs: '329K' },
-  { name: 'Cinthia Lin', url: 'https://www.youtube.com/channel/UCAFdoddRINpwc_oHPk5fQig', subs: '44.9K' },
-]
-
-const modeOptions: Array<{ value: InputMode; label: string; hint: string }> = [
-  { value: 'keyword', label: '關鍵字', hint: '例如：香港身份認同、Gen Z 不想返工、東南亞中產消費' },
-  { value: 'channel_url', label: '頻道 URL', hint: '由成功頻道倒推可以複製的題材方向' },
-  { value: 'video_url', label: '影片 URL', hint: '由一條爆款片拆解模式，再延伸成新的題材卡' },
-]
-
-const PAGE_CSS = `
-:root {
-  --bg: #1f2140;
-  --panel: #2a2d4d;
-  --panel-soft: #313457;
-  --line: rgba(255,255,255,0.08);
-  --text: #eef1ff;
-  --text2: #c5ccef;
-  --text3: #99a1d8;
-  --primary: linear-gradient(135deg, #7b61ff 0%, #4b89ff 100%);
+function fmtNum(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `${Math.round(n / 1_000)}K`
+  return String(n)
 }
 
-* { box-sizing: border-box; }
+function outlierLabel(ratio: number) {
+  if (ratio >= 5) return { label: '十分爆', color: '#ff6b6b' }
+  if (ratio >= 2) return { label: '爆', color: '#ffa94d' }
+  if (ratio >= 0.5) return { label: '普通', color: '#a9e34b' }
+  return { label: '低', color: '#868e96' }
+}
 
-body { background: var(--bg); }
+const CSS = `
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #13141f; color: #e8eaf6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
 
-.workspace-shell {
+.shell {
   display: grid;
-  grid-template-columns: 236px minmax(0, 1fr);
-  gap: 0;
-  min-height: calc(100vh - 80px);
-  border: 1px solid var(--line);
-  border-radius: 26px;
-  overflow: hidden;
-  background: rgba(31,33,64,0.92);
-  box-shadow: 0 30px 80px rgba(7,10,24,0.34);
+  grid-template-columns: 280px minmax(0, 1fr);
+  min-height: 100vh;
 }
 
 .sidebar {
-  background: #252846;
-  border-right: 1px solid var(--line);
-  padding: 18px 16px 20px;
-  display: grid;
-  align-content: start;
-  gap: 14px;
-}
-
-.workspace-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  border: 1px solid var(--line);
-  background: rgba(255,255,255,0.04);
-  border-radius: 18px;
-  padding: 12px 14px;
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.workspace-chip-logo {
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #7b61ff 0%, #4b89ff 100%);
-}
-
-.workspace-sub {
-  color: var(--text3);
-  font-size: 12px;
-  line-height: 1.65;
-}
-
-.sidebar-nav {
-  display: grid;
-  gap: 6px;
-}
-
-.sidebar-nav-item {
+  background: #1a1c2e;
+  border-right: 1px solid rgba(255,255,255,0.07);
+  padding: 24px 18px;
   display: flex;
-  width: 100%;
-  align-items: center;
-  border: none;
-  background: transparent;
-  color: var(--text2);
-  font-size: 15px;
-  padding: 14px 14px;
-  border-radius: 16px;
-  cursor: pointer;
+  flex-direction: column;
+  gap: 20px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
 }
 
-.sidebar-nav-item.active {
-  background: rgba(123,97,255,0.25);
-  color: #fff;
-}
-
-.sidebar-section-title {
-  color: var(--text3);
-  font-size: 11px;
-  letter-spacing: 0.14em;
+.logo {
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  color: #7c83d6;
   text-transform: uppercase;
-  margin-top: 4px;
 }
 
-.step-block {
-  display: grid;
-  gap: 10px;
-}
-
-.step-num {
-  color: var(--text3);
-  font-size: 12px;
-  letter-spacing: 0.16em;
-}
-
-.step-label {
-  color: var(--text);
-  font-size: 15px;
+.logo-title {
+  font-size: 22px;
   font-weight: 700;
+  color: #e8eaf6;
+  margin-top: 4px;
+  line-height: 1.2;
 }
 
-.field,
-.select,
-.textarea {
-  width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: rgba(255,255,255,0.05);
-  color: var(--text);
-  padding: 12px 14px;
-  font-size: 14px;
-  outline: none;
+.divider {
+  height: 1px;
+  background: rgba(255,255,255,0.07);
 }
 
-.textarea {
-  min-height: 92px;
-  resize: vertical;
-  font-family: inherit;
-}
-
-.field::placeholder,
-.textarea::placeholder {
-  color: rgba(224,229,255,0.42);
-}
-
-.muted {
-  color: var(--text3);
+.section-label {
   font-size: 11px;
-  line-height: 1.6;
+  letter-spacing: 0.16em;
+  color: #6b74c4;
+  text-transform: uppercase;
 }
 
-.chips {
+.field-group {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 8px;
 }
 
-.chip {
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(255,255,255,0.04);
-  color: var(--text2);
-  padding: 10px 14px;
+.field-label {
   font-size: 13px;
-  cursor: pointer;
+  color: #a5adde;
 }
 
-.chip.sel {
-  background: var(--primary);
-  color: #fff;
-  border-color: transparent;
-}
-
-.watch-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+input, textarea, select {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  color: #e8eaf6;
   padding: 10px 12px;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.04);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
 }
 
-.watch-link {
-  color: var(--text);
-  text-decoration: none;
-  font-size: 13px;
-  flex: 1;
+input:focus, textarea:focus, select:focus {
+  border-color: rgba(124,131,214,0.6);
 }
 
-.watch-meta {
-  color: var(--text3);
-  margin-left: 8px;
-  font-size: 11px;
+input::placeholder, textarea::placeholder {
+  color: rgba(165,173,222,0.35);
 }
 
-.ghost-btn,
-.delete-btn,
-.btn-submit,
-.top-btn,
-.row-btn,
-.copy-btn {
-  cursor: pointer;
+textarea {
+  min-height: 80px;
+  resize: vertical;
 }
 
-.ghost-btn {
-  border: 1px solid var(--line);
-  background: rgba(255,255,255,0.04);
-  color: var(--text);
-  border-radius: 999px;
-  padding: 8px 12px;
-  font-size: 12px;
+select option {
+  background: #1a1c2e;
 }
 
-.delete-btn {
+.btn-primary {
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
   border: none;
-  background: none;
-  color: var(--text3);
-  font-size: 16px;
-  padding: 0 0 0 8px;
-}
-
-.btn-submit {
-  border: none;
-  border-radius: 18px;
-  background: var(--primary);
+  background: linear-gradient(135deg, #7c83d6, #5c6bc0);
   color: #fff;
-  padding: 15px 18px;
   font-size: 15px;
   font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
 }
 
-.btn-submit:disabled {
-  opacity: 0.55;
+.btn-primary:disabled {
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
-.sidebar-footer-card,
-.error-box {
-  border-radius: 18px;
+.status-box {
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.status-box.success { background: rgba(105,219,124,0.12); color: #8ce99a; }
+.status-box.error { background: rgba(255,107,107,0.12); color: #ffa8a8; }
+.status-box.loading { background: rgba(124,131,214,0.12); color: #bac0f0; }
+
+.preview-box {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
   padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.sidebar-footer-card {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid var(--line);
+.preview-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e8eaf6;
+  line-height: 1.4;
 }
 
-.sidebar-footer-eyebrow {
-  color: var(--text3);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.sidebar-footer-number {
-  color: var(--text);
-  font-size: 30px;
-  font-weight: 700;
-  margin-top: 6px;
-}
-
-.sidebar-footer-copy {
-  color: var(--text2);
+.preview-meta {
   font-size: 12px;
-  line-height: 1.65;
+  color: #6b74c4;
+}
+
+.preview-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.preview-stat {
+  background: rgba(255,255,255,0.04);
+  border-radius: 8px;
+  padding: 8px;
+  text-align: center;
+}
+
+.preview-stat-num {
+  font-size: 16px;
+  font-weight: 700;
+  color: #e8eaf6;
+}
+
+.preview-stat-label {
+  font-size: 10px;
+  color: #6b74c4;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 3px;
+}
+
+.main {
+  padding: 28px 28px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.main-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.main-title {
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.main-sub {
+  font-size: 14px;
+  color: #7c83d6;
   margin-top: 6px;
 }
 
-.error-box {
-  background: rgba(209,92,92,0.14);
-  color: #ffb3b3;
-  line-height: 1.7;
+.sort-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #7c83d6;
+}
+
+.sort-row select {
+  width: auto;
+  padding: 7px 10px;
   font-size: 13px;
 }
 
-.main-panel {
-  padding: 22px 22px 30px;
+.stats-row {
   display: grid;
-  gap: 18px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
 }
 
-.workspace-header {
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: 18px;
+.stat-card {
+  background: #1a1c2e;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 18px 20px;
 }
 
-.brand-label {
-  color: var(--text3);
-  font-size: 12px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.page-title {
-  margin: 8px 0 0;
-  font-size: 54px;
-  line-height: 0.98;
-  letter-spacing: -0.04em;
-}
-
-.header-meta {
-  color: var(--text2);
-  font-size: 16px;
-  margin-top: 10px;
-}
-
-.workspace-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.top-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  border-radius: 14px;
-  padding: 12px 16px;
-  font-size: 14px;
-  border: 1px solid var(--line);
-}
-
-.top-btn.ghost {
-  background: rgba(255,255,255,0.05);
-  color: var(--text);
-}
-
-.top-btn.primary {
-  background: var(--primary);
-  color: #fff;
-  border-color: transparent;
-}
-
-.hero-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 294px 294px 294px;
-  gap: 14px;
-}
-
-.hero-card,
-.metric-card,
-.table-shell,
-.summary-card,
-.idea-row {
-  border-radius: 26px;
-  border: 1px solid var(--line);
-  background: #2b2e4e;
-}
-
-.hero-card {
-  padding: 24px 26px;
-}
-
-.hero-eyebrow,
-.section-eyebrow {
-  color: var(--text3);
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.hero-copy {
-  color: var(--text);
-  font-size: 16px;
-  line-height: 1.75;
-  margin-top: 12px;
-  max-width: 760px;
-}
-
-.hero-highlight {
-  font-size: 22px;
-  line-height: 1.35;
-  font-weight: 700;
-  margin-top: 12px;
-}
-
-.metric-card {
-  padding: 22px;
-}
-
-.metric-number {
-  color: var(--text);
-  font-size: 44px;
+.stat-card-num {
+  font-size: 32px;
   font-weight: 700;
   line-height: 1;
 }
 
-.metric-title {
-  color: var(--text);
-  font-size: 15px;
-  margin-top: 14px;
-}
-
-.metric-copy {
-  color: var(--text2);
+.stat-card-label {
   font-size: 12px;
-  line-height: 1.6;
+  color: #6b74c4;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   margin-top: 8px;
 }
 
-.board-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 270px;
-  gap: 16px;
-}
-
-.table-shell {
+.table-wrap {
+  background: #1a1c2e;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 20px;
   overflow: hidden;
 }
 
 .table-head {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) 250px 260px 210px;
+  grid-template-columns: minmax(0,2fr) 100px 100px 100px 120px 90px 90px 80px;
   gap: 0;
-  padding: 18px 18px 14px;
-  border-bottom: 1px solid var(--line);
-  color: var(--text3);
-  font-size: 13px;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+  color: #6b74c4;
 }
 
-.idea-row {
-  margin: 0 0 14px;
-  padding: 18px;
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) 250px 260px 210px;
-  gap: 18px;
-  align-items: start;
-}
-
-.idea-column {
-  min-width: 0;
-}
-
-.idea-section-label {
-  color: var(--text3);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  margin-bottom: 10px;
-}
-
-.idea-title {
-  color: var(--text);
-  font-size: 28px;
-  line-height: 1.15;
-  letter-spacing: -0.03em;
-}
-
-.idea-summary {
-  color: var(--text2);
-  font-size: 14px;
-  line-height: 1.7;
-  margin-top: 12px;
-}
-
-.idea-tags {
+.table-body {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
+  flex-direction: column;
 }
 
-.tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: rgba(255,255,255,0.05);
-  color: var(--text2);
-  padding: 8px 12px;
-  font-size: 12px;
-}
-
-.score-pill {
-  height: 96px;
-  border-radius: 24px;
-  background: rgba(123,97,255,0.22);
+.video-row {
   display: grid;
-  place-items: center;
-  color: var(--text);
-  font-size: 54px;
-  font-weight: 700;
+  grid-template-columns: minmax(0,2fr) 100px 100px 100px 120px 90px 90px 80px;
+  gap: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  align-items: start;
+  transition: background 0.1s;
+  cursor: pointer;
 }
 
-.score-track {
-  margin-top: 16px;
+.video-row:hover { background: rgba(255,255,255,0.02); }
+.video-row:last-child { border-bottom: none; }
+
+.video-title-zh {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e8eaf6;
+  line-height: 1.35;
 }
 
-.score-track-label {
-  color: var(--text2);
+.video-title-en {
   font-size: 12px;
-  margin-bottom: 8px;
+  color: #6b74c4;
+  margin-top: 4px;
+  line-height: 1.4;
 }
 
-.score-line {
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.12);
-  overflow: hidden;
-}
-
-.score-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: var(--primary);
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.stat-box {
-  padding: 16px 14px;
-  border-radius: 20px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--line);
-}
-
-.stat-number {
-  color: var(--text);
-  font-size: 28px;
-  font-weight: 700;
-}
-
-.stat-label {
-  color: var(--text3);
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  margin-top: 10px;
-}
-
-.ref-stack {
-  display: grid;
-  gap: 10px;
-}
-
-.ref-box {
-  padding: 14px;
-  border-radius: 18px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--line);
-}
-
-.ref-title {
-  color: var(--text);
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.ref-meta {
-  color: var(--text2);
+.video-channel {
   font-size: 12px;
-  line-height: 1.6;
+  color: #7c83d6;
   margin-top: 6px;
 }
 
-.row-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-top: 16px;
+.video-region {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(124,131,214,0.15);
+  color: #a5adde;
 }
 
-.row-btn,
-.copy-btn {
+.col-val {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e8eaf6;
+  padding-top: 2px;
+}
+
+.col-sub {
+  font-size: 11px;
+  color: #6b74c4;
+  margin-top: 3px;
+}
+
+.outlier-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
-  padding: 10px 14px;
+  border-radius: 8px;
+  padding: 6px 10px;
   font-size: 13px;
-  text-decoration: none;
+  font-weight: 700;
 }
 
-.row-btn {
-  background: rgba(255,255,255,0.05);
-  color: var(--text);
-  border: 1px solid var(--line);
-}
-
-.row-btn.primary {
-  background: var(--primary);
-  color: #fff;
-  border-color: transparent;
-}
-
-.copy-btn {
-  border: 1px solid var(--line);
-  background: rgba(255,255,255,0.05);
-  color: var(--text);
-}
-
-.summary-card {
-  padding: 18px;
-  display: grid;
+.expand-row {
+  grid-column: 1 / -1;
+  background: rgba(255,255,255,0.02);
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
-  align-content: start;
 }
 
-.summary-item {
-  padding: 14px;
-  border-radius: 18px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--line);
+.expand-label {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6b74c4;
+  margin-bottom: 4px;
 }
 
-.summary-title {
-  color: var(--text);
+.expand-text {
   font-size: 14px;
-  line-height: 1.5;
+  color: #c5caf0;
+  line-height: 1.7;
 }
 
-.summary-copy {
-  color: var(--text2);
-  font-size: 12px;
-  line-height: 1.6;
-  margin-top: 6px;
+.expand-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
 }
 
 .empty-state {
-  padding: 26px;
-  color: var(--text2);
+  padding: 60px 20px;
+  text-align: center;
+  color: #6b74c4;
+  font-size: 15px;
   line-height: 1.8;
 }
 
-@media (max-width: 1400px) {
-  .hero-row {
-    grid-template-columns: minmax(0, 1fr) 1fr;
+@media (max-width: 1100px) {
+  .shell { grid-template-columns: 1fr; }
+  .sidebar { position: static; height: auto; }
+  .table-head, .video-row {
+    grid-template-columns: 1fr 1fr 1fr;
   }
-
-  .board-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .table-head,
-  .idea-row {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 1120px) {
-  .workspace-shell {
-    grid-template-columns: 1fr;
-  }
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
 }
 `
 
-function fmtCompact(value: number) {
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`
-  if (value >= 1_000) return `${Math.round(value / 1_000)}K`
-  return String(value)
-}
-
 export default function HomePage() {
-  const [mode, setMode] = useState<InputMode>('keyword')
-  const [query, setQuery] = useState('')
-  const [language, setLanguage] = useState('zh-HK')
-  const [market, setMarket] = useState('Global')
-  const [error, setError] = useState('')
-  const [result, setResult] = useState<YoutubeIdeaResult | null>(null)
-  const [isPending, startTransition] = useTransition()
-  const [watchlist, setWatchlist] = useState(DEFAULT_WATCHLIST)
-  const [newChannelName, setNewChannelName] = useState('')
-  const [newChannelUrl, setNewChannelUrl] = useState('')
-  const [showAddChannel, setShowAddChannel] = useState(false)
-  const [activeNav, setActiveNav] = useState<NavKey>('home')
-
-  const homeRef = useRef<HTMLElement | null>(null)
-  const workRef = useRef<HTMLElement | null>(null)
-  const boardRef = useRef<HTMLDivElement | null>(null)
-  const analysisRef = useRef<HTMLElement | null>(null)
-
-  const modeHint = useMemo(
-    () => modeOptions.find((item) => item.value === mode)?.hint ?? '',
-    [mode]
-  )
-
-  const referenceRows = result?.algrowRows ?? []
-  const ideas = result?.ideas ?? []
-  const referenceCount = referenceRows.length
-  const generatedCount = ideas.length
-  const totalReferenceViews = referenceRows.reduce((sum, row) => sum + Number(row.views ?? 0), 0)
-  const averageOutlier =
-    referenceRows.length > 0
-      ? (
-          referenceRows.reduce((sum, row) => {
-            const views = Number(row.views ?? 0)
-            const subs = Number(row.subs ?? row.subscriber_count ?? 0)
-            return sum + (subs > 0 ? views / subs : 0)
-          }, 0) / referenceRows.length
-        ).toFixed(1)
-      : '0.0'
+  const [videoUrl, setVideoUrl] = useState('')
+  const [description, setDescription] = useState('')
+  const [region, setRegion] = useState('')
+  const [isPending, setIsPending] = useState(false)
+  const [status, setStatus] = useState<{ type: 'success' | 'error' | 'loading'; msg: string } | null>(null)
+  const [preview, setPreview] = useState<Partial<ViralVideo> | null>(null)
+  const [videos, setVideos] = useState<ViralVideo[]>([])
+  const [sortBy, setSortBy] = useState<'outlier_ratio' | 'views' | 'created_at'>('outlier_ratio')
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [loadingVideos, setLoadingVideos] = useState(true)
 
   useEffect(() => {
-    const observers = [
-      { key: 'home' as NavKey, ref: homeRef },
-      { key: 'work' as NavKey, ref: workRef },
-      { key: 'board' as NavKey, ref: boardRef },
-      { key: 'analysis' as NavKey, ref: analysisRef },
-    ]
-    const io = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0]
-        if (!visible) return
-        const next = observers.find((item) => item.ref.current === visible.target)
-        if (next) setActiveNav(next.key)
-      },
-      { threshold: [0.25, 0.45, 0.7] }
-    )
-    observers.forEach((item) => {
-      if (item.ref.current) io.observe(item.ref.current)
-    })
-    return () => io.disconnect()
+    fetchVideos()
   }, [])
 
-  function jumpTo(section: NavKey) {
-    setActiveNav(section)
-    const target =
-      section === 'home'
-        ? homeRef.current
-        : section === 'work'
-          ? workRef.current
-          : section === 'board'
-            ? boardRef.current
-            : analysisRef.current
-    target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-
-  function handlePreset(preset: typeof PRESET_TOPICS[0]) {
-    setMode('keyword')
-    setQuery(preset.query)
-    setMarket('Global')
-  }
-
-  function handleAddChannel() {
-    if (!newChannelName.trim() || !newChannelUrl.trim()) return
-    setWatchlist((prev) => [...prev, { name: newChannelName.trim(), url: newChannelUrl.trim(), subs: '—' }])
-    setNewChannelName('')
-    setNewChannelUrl('')
-    setShowAddChannel(false)
-  }
-
-  function handleRemoveChannel(index: number) {
-    setWatchlist((prev) => prev.filter((_, i) => i !== index))
-  }
-
-  function handleGenerate() {
-    setError('')
-    if (!query.trim()) {
-      setError('請先填入關鍵字、頻道 URL 或影片 URL。')
-      return
+  async function fetchVideos() {
+    setLoadingVideos(true)
+    try {
+      const res = await fetch('/api/viral-videos')
+      const data = await res.json()
+      setVideos(data.videos ?? [])
+    } catch {
+      // fail silently
+    } finally {
+      setLoadingVideos(false)
     }
-    startTransition(async () => {
-      try {
-        const response = await fetch('/api/youtube-ideas', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mode, query, language, market }),
-        })
-        const data = await response.json()
-        if (!response.ok) {
-          throw new Error(data.error || '未能生成 YouTube 題材卡。')
-        }
-        setResult(data)
-      } catch (requestError) {
-        setResult(null)
-        setError(requestError instanceof Error ? requestError.message : '未能生成 YouTube 題材卡。')
-      }
-    })
   }
+
+  async function handleSubmit() {
+    if (!videoUrl.trim()) return
+    setIsPending(true)
+    setStatus({ type: 'loading', msg: '正在拉取數據同分析中，請稍候…' })
+    setPreview(null)
+
+    try {
+      const res = await fetch('/api/viral-videos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoUrl, description, region }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setStatus({ type: 'error', msg: data.error ?? '未知錯誤' })
+        return
+      }
+
+      setPreview(data)
+      setStatus({ type: 'success', msg: `✓ 已儲存：${data.title_zh || data.title_original}` })
+      setVideoUrl('')
+      setDescription('')
+      setRegion('')
+      await fetchVideos()
+    } catch (err) {
+      setStatus({ type: 'error', msg: err instanceof Error ? err.message : '網絡錯誤' })
+    } finally {
+      setIsPending(false)
+    }
+  }
+
+  const sorted = [...videos].sort((a, b) => {
+    if (sortBy === 'outlier_ratio') return b.outlier_ratio - a.outlier_ratio
+    if (sortBy === 'views') return b.views - a.views
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  })
+
+  const totalViews = videos.reduce((s, v) => s + v.views, 0)
+  const avgOutlier = videos.length
+    ? (videos.reduce((s, v) => s + v.outlier_ratio, 0) / videos.length).toFixed(1)
+    : '0.0'
+  const topOutlier = videos.length
+    ? Math.max(...videos.map((v) => v.outlier_ratio)).toFixed(1)
+    : '0.0'
 
   return (
     <>
-      <style>{PAGE_CSS}</style>
-      <div className="workspace-shell">
+      <style>{CSS}</style>
+      <div className="shell">
+
+        {/* Sidebar */}
         <aside className="sidebar">
           <div>
-            <button className="workspace-chip" onClick={() => jumpTo('home')} type="button">
-              <span className="workspace-chip-logo" />
-              <span>Youtube Idea Reader</span>
-            </button>
-            <div className="workspace-sub">SOON 內部 YouTube 題材系統，保留 Algrow signal flow 再整理成題材 collection。</div>
+            <div className="logo">SOON · Internal</div>
+            <div className="logo-title">爆款影片<br />收藏庫</div>
           </div>
 
-          <div className="sidebar-nav">
-            <button className={`sidebar-nav-item${activeNav === 'home' ? ' active' : ''}`} onClick={() => jumpTo('home')} type="button">首頁</button>
-            <button className={`sidebar-nav-item${activeNav === 'work' ? ' active' : ''}`} onClick={() => jumpTo('work')} type="button">我的工作</button>
-            <button className={`sidebar-nav-item${activeNav === 'board' ? ' active' : ''}`} onClick={() => jumpTo('board')} type="button">題材板</button>
-            <button className={`sidebar-nav-item${activeNav === 'analysis' ? ' active' : ''}`} onClick={() => jumpTo('analysis')} type="button">近期分析</button>
+          <div className="divider" />
+
+          <div className="section-label">新增影片</div>
+
+          <div className="field-group">
+            <div className="field-label">01 · YouTube URL</div>
+            <input
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=..."
+              onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+            />
           </div>
 
-          <div className="sidebar-section-title">快速輸入</div>
+          <div className="field-group">
+            <div className="field-label">02 · 描述（你的觀察）</div>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="點解覺得呢條片值得收藏？有咩特別嘅切入角度或爆款原因…"
+            />
+          </div>
 
-          <div className="step-block">
-            <span className="step-num">01</span>
-            <span className="step-label">研究來源</span>
-            <div className="chips">
-              {modeOptions.map((option) => (
-                <button key={option.value} className={`chip${mode === option.value ? ' sel' : ''}`} onClick={() => setMode(option.value)} type="button">
-                  {option.label}
-                </button>
+          <div className="field-group">
+            <div className="field-label">03 · 國家 / 地區</div>
+            <select value={region} onChange={(e) => setRegion(e.target.value)}>
+              <option value="">選擇地區…</option>
+              {REGIONS.map((r) => (
+                <option key={r} value={r}>{r}</option>
               ))}
-            </div>
-            <input className="field" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={modeHint} />
-            <div className="muted">{modeHint}</div>
-          </div>
-
-          <div className="step-block">
-            <span className="step-num">02</span>
-            <span className="step-label">預設題材</span>
-            <div className="chips">
-              {PRESET_TOPICS.map((preset) => (
-                <button key={preset.label} className={`chip${query === preset.query ? ' sel' : ''}`} onClick={() => handlePreset(preset)} type="button">
-                  {preset.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="step-block">
-            <span className="step-num">03</span>
-            <span className="step-label">語言與市場</span>
-            <select className="select" value={language} onChange={(event) => setLanguage(event.target.value)}>
-              <option value="zh-HK">繁中 / 廣東話</option>
-              <option value="zh-TW">繁中 / 台灣</option>
-              <option value="en">English</option>
-            </select>
-            <select className="select" value={market} onChange={(event) => setMarket(event.target.value)}>
-              <option value="Global">Global</option>
-              <option value="Southeast Asia">Southeast Asia</option>
-              <option value="East Asia">East Asia</option>
-              <option value="Hong Kong">Hong Kong</option>
-              <option value="Taiwan">Taiwan</option>
             </select>
           </div>
 
-          <div className="step-block">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-              <div>
-                <span className="step-num">04</span>
-                <div className="step-label" style={{ marginTop: '6px' }}>Watchlist</div>
-              </div>
-              <button className="ghost-btn" onClick={() => setShowAddChannel((value) => !value)} type="button">
-                {showAddChannel ? '取消' : '新增'}
-              </button>
-            </div>
-
-            {showAddChannel ? (
-              <>
-                <input className="field" value={newChannelName} onChange={(event) => setNewChannelName(event.target.value)} placeholder="頻道名稱" />
-                <input className="field" value={newChannelUrl} onChange={(event) => setNewChannelUrl(event.target.value)} placeholder="YouTube 頻道連結" />
-                <button className="btn-submit" onClick={handleAddChannel} type="button">確認新增</button>
-              </>
-            ) : null}
-
-            <div style={{ display: 'grid', gap: '8px' }}>
-              {watchlist.map((channel, index) => (
-                <div className="watch-row" key={`${channel.name}-${index}`}>
-                  <a className="watch-link" href={channel.url} target="_blank" rel="noreferrer">
-                    {channel.name}
-                    <span className="watch-meta">{channel.subs}</span>
-                  </a>
-                  <button className="delete-btn" onClick={() => handleRemoveChannel(index)} type="button">×</button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {error ? <div className="error-box">{error}</div> : null}
-
-          <button className="btn-submit" onClick={handleGenerate} disabled={isPending || !query.trim()} type="button">
-            {isPending ? '分析中…' : '分析並生成題材'}
+          <button
+            className="btn-primary"
+            onClick={handleSubmit}
+            disabled={isPending || !videoUrl.trim()}
+            type="button"
+          >
+            {isPending ? '分析中…' : '分析並儲存'}
           </button>
 
-          <div className="sidebar-footer-card">
-            <div className="sidebar-footer-eyebrow">當前狀態</div>
-            <div className="sidebar-footer-number">{generatedCount}</div>
-            <div className="sidebar-footer-copy">已生成題材卡。系統會先讀 Algrow reference，再整理成 collection。</div>
-          </div>
+          {status && (
+            <div className={`status-box ${status.type}`}>{status.msg}</div>
+          )}
+
+          {preview && (
+            <div className="preview-box">
+              <div className="preview-title">{preview.title_zh}</div>
+              <div className="preview-meta">{preview.title_original}</div>
+              <div className="preview-stats">
+                <div className="preview-stat">
+                  <div className="preview-stat-num">{fmtNum(preview.views ?? 0)}</div>
+                  <div className="preview-stat-label">Views</div>
+                </div>
+                <div className="preview-stat">
+                  <div className="preview-stat-num">{fmtNum(preview.subscribers ?? 0)}</div>
+                  <div className="preview-stat-label">Subs</div>
+                </div>
+                <div className="preview-stat">
+                  <div className="preview-stat-num">{(preview.outlier_ratio ?? 0).toFixed(1)}x</div>
+                  <div className="preview-stat-label">爆款</div>
+                </div>
+              </div>
+            </div>
+          )}
         </aside>
 
-        <main className="main-panel">
-          <div className="workspace-header">
+        {/* Main */}
+        <main className="main">
+          <div className="main-header">
             <div>
-              <div className="brand-label">SOON 創意營運</div>
-              <h1 className="page-title">Youtube Idea Collection</h1>
-              <div className="header-meta">以 `IG reel ideabrainstorm` 的工作台方式整理 YouTube 題材研究。</div>
+              <div className="main-title">爆款 Collection</div>
+              <div className="main-sub">按 Views ÷ Subscribers 排列 · 數字愈高愈爆</div>
             </div>
-            <div className="workspace-actions">
-              <a className="top-btn ghost" href="/library">題材庫</a>
-              <a className="top-btn ghost" href="https://idea-brainstorm.vercel.app" target="_blank" rel="noreferrer">IG 題材台</a>
-              <a className="top-btn primary" href="https://script-generator-xi.vercel.app" target="_blank" rel="noreferrer">劇本生成</a>
+            <div className="sort-row">
+              排序：
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              >
+                <option value="outlier_ratio">爆款指數</option>
+                <option value="views">播放量</option>
+                <option value="created_at">最新加入</option>
+              </select>
             </div>
           </div>
 
-          <section className="hero-row" ref={homeRef}>
-            <div className="hero-card">
-              <div className="hero-eyebrow">今日概況</div>
-              <div className="hero-highlight">集中管理 YouTube 題材研究、Algrow 訊號與下一步劇本接力，令前期研究更似真正工作台。</div>
-              <div className="hero-copy">呢邊唔係直接寫 script，而係先整理值得拍嘅方向、爆款模式、受眾適配同延伸系列，之後先帶去劇本生成。</div>
+          <div className="stats-row">
+            <div className="stat-card">
+              <div className="stat-card-num">{videos.length}</div>
+              <div className="stat-card-label">已收藏影片</div>
             </div>
-            <div className="metric-card">
-              <div className="section-eyebrow">題材卡</div>
-              <div className="metric-number">{generatedCount}</div>
-              <div className="metric-title">已生成題材數量</div>
-              <div className="metric-copy">每次會輸出 5 張可以直接 review 的題材卡。</div>
+            <div className="stat-card">
+              <div className="stat-card-num">{fmtNum(totalViews)}</div>
+              <div className="stat-card-label">總播放量</div>
             </div>
-            <div className="metric-card">
-              <div className="section-eyebrow">Reference</div>
-              <div className="metric-number">{referenceCount}</div>
-              <div className="metric-title">Algrow 參考影片</div>
-              <div className="metric-copy">先讀 reference signals，再決定值唔值得延伸。</div>
+            <div className="stat-card">
+              <div className="stat-card-num">{avgOutlier}x</div>
+              <div className="stat-card-label">平均爆款指數</div>
             </div>
-            <div className="metric-card">
-              <div className="section-eyebrow">Outlier</div>
-              <div className="metric-number">{averageOutlier}x</div>
-              <div className="metric-title">平均放大比率</div>
-              <div className="metric-copy">快速看演算法偏好，同 IG ideabrainstorm 一樣先看 signal。</div>
+            <div className="stat-card">
+              <div className="stat-card-num">{topOutlier}x</div>
+              <div className="stat-card-label">最高爆款指數</div>
             </div>
-          </section>
+          </div>
 
-          <section className="board-layout" ref={workRef}>
-            <section className="table-shell">
-              <div className="table-head">
-                <div>題材</div>
-                <div>爆款指數</div>
-                <div>數據</div>
-                <div>參考影片</div>
-              </div>
+          <div className="table-wrap">
+            <div className="table-head">
+              <div>影片</div>
+              <div>Views</div>
+              <div>Likes</div>
+              <div>Comments</div>
+              <div>Subscribers</div>
+              <div>爆款指數</div>
+              <div>地區</div>
+              <div>時長</div>
+            </div>
 
-              <div style={{ display: 'grid', gap: '14px', padding: '14px' }}>
-                {ideas.length ? (
-                  ideas.map((idea, index) => {
-                    const cat = CATEGORY_META[idea.category] ?? CATEGORY_META.evergreen
-                    const firstReference = referenceRows[index] ?? referenceRows[0] ?? null
-                    const refViews = Number(firstReference?.views ?? 0)
-                    const refSubs = Number(firstReference?.subs ?? firstReference?.subscriber_count ?? 0)
-                    const score = Math.max(76, Math.min(98, Math.round((refSubs > 0 ? (refViews / refSubs) * 10 : 82) + 40)))
-                    return (
-                      <article key={`${idea.title}-${index}`} className="idea-row">
-                        <div className="idea-column">
-                          <div className="idea-section-label">題材</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                            <span className="tag">{cat.emoji} {cat.label}</span>
-                            <span className="tag">Idea {index + 1}</span>
-                          </div>
-                          <div className="idea-title">{idea.title}</div>
-                          <div className="idea-summary">{idea.coreAngle}</div>
-                          <div className="idea-tags">
-                            <span className="tag">{idea.whyNow}</span>
-                            <span className="tag">{idea.audienceFit}</span>
-                            <span className="tag">{idea.breakoutPattern}</span>
-                          </div>
-                          <div className="row-actions">
-                            <a className="row-btn primary" href="https://script-generator-xi.vercel.app" target="_blank" rel="noreferrer">→ 劇本生成</a>
-                            <button
-                              className="copy-btn"
-                              type="button"
-                              onClick={() => {
-                                const brief = [
-                                  `題材：${idea.title}`,
-                                  `分類：${cat.emoji} ${cat.label}`,
-                                  `核心角度：${idea.coreAngle}`,
-                                  `切入原因：${idea.whyNow}`,
-                                  `受眾適配：${idea.audienceFit}`,
-                                  `爆款模式：${idea.breakoutPattern}`,
-                                  `需補充資料：${idea.backingInfoNeeded.join(' / ')}`,
-                                  `延伸系列：${idea.seriesExtensions.join(' / ')}`,
-                                ].join('\n')
-                                navigator.clipboard.writeText(brief)
-                              }}
-                            >
-                              複製摘要
-                            </button>
-                          </div>
+            <div className="table-body">
+              {loadingVideos ? (
+                <div className="empty-state">載入中…</div>
+              ) : sorted.length === 0 ? (
+                <div className="empty-state">
+                  尚未收藏任何影片。<br />
+                  在左側貼入 YouTube URL 開始分析。
+                </div>
+              ) : (
+                sorted.map((v) => {
+                  const ol = outlierLabel(v.outlier_ratio)
+                  const isExpanded = expandedId === v.id
+                  return (
+                    <div key={v.id}>
+                      <div
+                        className="video-row"
+                        onClick={() => setExpandedId(isExpanded ? null : v.id)}
+                      >
+                        <div>
+                          <div className="video-title-zh">{v.title_zh || v.title_original}</div>
+                          {v.title_zh && v.title_original && (
+                            <div className="video-title-en">{v.title_original}</div>
+                          )}
+                          <div className="video-channel">{v.channel_name}</div>
+                          {v.region && <span className="video-region">{v.region}</span>}
                         </div>
-
-                        <div className="idea-column">
-                          <div className="idea-section-label">爆款指數</div>
-                          <div className="score-pill">{score}</div>
-                          <div className="score-track">
-                            <div className="score-track-label">爆款指數</div>
-                            <div className="score-line">
-                              <div className="score-fill" style={{ width: `${score}%` }} />
-                            </div>
-                          </div>
+                        <div>
+                          <div className="col-val">{fmtNum(v.views)}</div>
                         </div>
-
-                        <div className="idea-column">
-                          <div className="idea-section-label">數據</div>
-                          <div className="stats-grid">
-                            <div className="stat-box">
-                              <div className="stat-number">{fmtCompact(refViews)}</div>
-                              <div className="stat-label">Views</div>
-                            </div>
-                            <div className="stat-box">
-                              <div className="stat-number">{fmtCompact(refSubs)}</div>
-                              <div className="stat-label">Subs</div>
-                            </div>
-                            <div className="stat-box">
-                              <div className="stat-number">{refSubs > 0 ? `${(refViews / refSubs).toFixed(1)}x` : '--'}</div>
-                              <div className="stat-label">Outlier</div>
-                            </div>
-                          </div>
+                        <div>
+                          <div className="col-val">{fmtNum(v.likes)}</div>
                         </div>
+                        <div>
+                          <div className="col-val">{fmtNum(v.comments)}</div>
+                        </div>
+                        <div>
+                          <div className="col-val">{fmtNum(v.subscribers)}</div>
+                        </div>
+                        <div>
+                          <div
+                            className="outlier-badge"
+                            style={{ background: ol.color + '22', color: ol.color }}
+                          >
+                            {v.outlier_ratio.toFixed(1)}x
+                          </div>
+                          <div className="col-sub">{ol.label}</div>
+                        </div>
+                        <div>
+                          <div className="col-val" style={{ fontSize: '13px' }}>{v.region ?? '—'}</div>
+                        </div>
+                        <div>
+                          <div className="col-val" style={{ fontSize: '13px' }}>{v.duration ?? '—'}</div>
+                        </div>
+                      </div>
 
-                        <div className="idea-column">
-                          <div className="idea-section-label">參考影片</div>
-                          <div className="ref-stack">
-                            {idea.references?.length ? (
-                              idea.references.slice(0, 2).map((url) => (
-                                <a key={url} className="ref-box" href={url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
-                                  <div className="ref-title">參考影片 ↗</div>
-                                  <div className="ref-meta">{url.replace(/^https?:\/\//, '')}</div>
-                                </a>
-                              ))
-                            ) : (
-                              <div className="ref-box">
-                                <div className="ref-title">等待參考資料</div>
-                                <div className="ref-meta">Algrow signal 會顯示喺下方。</div>
+                      {isExpanded && (
+                        <div className="expand-row">
+                          <div className="expand-grid">
+                            {v.ai_analysis && (
+                              <div>
+                                <div className="expand-label">AI 內容分析</div>
+                                <div className="expand-text">{v.ai_analysis}</div>
+                              </div>
+                            )}
+                            {v.description && (
+                              <div>
+                                <div className="expand-label">你的觀察</div>
+                                <div className="expand-text">{v.description}</div>
                               </div>
                             )}
                           </div>
+                          <div>
+                            
+                              href={v.video_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ color: '#7c83d6', fontSize: '13px' }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              → 睇原片 ↗
+                            </a>
+                          </div>
                         </div>
-                      </article>
-                    )
-                  })
-                ) : (
-                  <div className="empty-state">
-                    生成之後，呢度會好似 IG reel ideabrainstorm 咁，以 collection table 形式列出題材、爆款指數、數據同參考影片。
-                  </div>
-                )}
-              </div>
-            </section>
-
-            <aside className="summary-card" ref={analysisRef}>
-              <div className="section-eyebrow">Algrow Summary</div>
-              <div className="summary-item">
-                <div className="summary-title">Reference 總播放量</div>
-                <div className="summary-copy">{fmtCompact(totalReferenceViews)} views</div>
-              </div>
-              <div className="summary-item">
-                <div className="summary-title">儲存狀態</div>
-                <div className="summary-copy">
-                  {result?.saveStatus === 'saved'
-                    ? `已儲存至題材庫 · ${result.savedIdeaId ?? ''}`
-                    : result?.saveStatus === 'failed'
-                      ? `入庫失敗 · ${result.saveError}`
-                      : ideas.length
-                        ? '已生成，未儲存到題材庫。'
-                        : '等待生成。'}
-                </div>
-              </div>
-              <div className="summary-item">
-                <div className="summary-title">工作流程</div>
-                <div className="summary-copy">輸入來源 → Algrow 拉 reference → 生成題材卡 → 推上劇本生成。</div>
-              </div>
-              <div className="summary-item" ref={boardRef}>
-                <div className="summary-title">Reference Signals</div>
-                <div className="summary-copy">你會喺呢邊看到 Algrow 帶回來的影片標題、頻道同 outlier 參考。</div>
-              </div>
-            </aside>
-          </section>
+                      )}
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </div>
         </main>
       </div>
     </>
