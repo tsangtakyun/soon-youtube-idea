@@ -23,6 +23,20 @@ type ViralVideo = {
   outlier_ratio: number
 }
 
+type TopicSignal = {
+  id: string
+  created_at: string
+  topic_zh: string
+  topic_en: string | null
+  signal_count: number
+  max_outlier_ratio: number
+  avg_outlier_ratio: number
+  related_channels: string[]
+  ai_analysis: string | null
+  soon_angle: string | null
+  status: string
+}
+
 const REGIONS = [
   '中國大陸', '香港', '台灣', '日本', '韓國',
   '泰國', '印尼', '菲律賓', '越南', '馬來西亞',
@@ -221,7 +235,7 @@ select option {
 
 .main-header {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
 }
@@ -278,6 +292,62 @@ select option {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   margin-top: 8px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.tab {
+  padding: 8px 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: transparent;
+  color: #6b74c4;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tab.active {
+  background: rgba(124,131,214,0.2);
+  color: #e8eaf6;
+  border-color: rgba(124,131,214,0.4);
+}
+
+.scan-btn {
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(124,131,214,0.4);
+  background: rgba(124,131,214,0.1);
+  color: #a5adde;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.scan-btn:hover {
+  background: rgba(124,131,214,0.2);
+  color: #e8eaf6;
+}
+
+.scan-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.scan-result {
+  font-size: 12px;
+  color: #8ce99a;
+  margin-top: 4px;
+  text-align: right;
+}
+
+.scan-result.error {
+  color: #ffa8a8;
 }
 
 .table-wrap {
@@ -401,6 +471,110 @@ select option {
   gap: 16px;
 }
 
+.topics-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.topic-card {
+  background: #1a1c2e;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 18px 20px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.topic-card:hover {
+  background: rgba(255,255,255,0.02);
+}
+
+.topic-card.new {
+  border-color: rgba(124,131,214,0.35);
+}
+
+.topic-card-main {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 110px 110px;
+  gap: 16px;
+  align-items: start;
+}
+
+.topic-zh {
+  font-size: 18px;
+  font-weight: 700;
+  color: #e8eaf6;
+  line-height: 1.3;
+}
+
+.topic-en {
+  font-size: 12px;
+  color: #6b74c4;
+  margin-top: 4px;
+}
+
+.topic-channels {
+  font-size: 12px;
+  color: #7c83d6;
+  margin-top: 8px;
+  line-height: 1.6;
+}
+
+.new-badge {
+  display: inline-block;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(124,131,214,0.2);
+  color: #a5adde;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.topic-metric {
+  text-align: center;
+}
+
+.topic-metric-num {
+  font-size: 28px;
+  font-weight: 700;
+  color: #e8eaf6;
+}
+
+.topic-metric-label {
+  font-size: 11px;
+  color: #6b74c4;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-top: 4px;
+}
+
+.topic-expand {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding-top: 14px;
+  margin-top: 14px;
+}
+
+.topic-expand-label {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6b74c4;
+  margin-bottom: 6px;
+}
+
+.topic-expand-text {
+  font-size: 14px;
+  color: #c5caf0;
+  line-height: 1.7;
+}
+
 .empty-state {
   padding: 60px 20px;
   text-align: center;
@@ -412,10 +586,9 @@ select option {
 @media (max-width: 1100px) {
   .shell { grid-template-columns: 1fr; }
   .sidebar { position: static; height: auto; }
-  .table-head, .video-row {
-    grid-template-columns: 1fr 1fr 1fr;
-  }
+  .table-head, .video-row { grid-template-columns: 1fr 1fr 1fr; }
   .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .topic-card-main { grid-template-columns: 1fr; }
 }
 `
 
@@ -427,12 +600,17 @@ export default function HomePage() {
   const [status, setStatus] = useState<{ type: 'success' | 'error' | 'loading'; msg: string } | null>(null)
   const [preview, setPreview] = useState<Partial<ViralVideo> | null>(null)
   const [videos, setVideos] = useState<ViralVideo[]>([])
+  const [topics, setTopics] = useState<TopicSignal[]>([])
   const [sortBy, setSortBy] = useState<'outlier_ratio' | 'views' | 'created_at'>('outlier_ratio')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [loadingVideos, setLoadingVideos] = useState(true)
+  const [activeTab, setActiveTab] = useState<'videos' | 'topics'>('topics')
+  const [isScanning, setIsScanning] = useState(false)
+  const [scanResult, setScanResult] = useState<{ msg: string; ok: boolean } | null>(null)
 
   useEffect(() => {
     fetchVideos()
+    fetchTopics()
   }, [])
 
   async function fetchVideos() {
@@ -445,6 +623,39 @@ export default function HomePage() {
       // fail silently
     } finally {
       setLoadingVideos(false)
+    }
+  }
+
+  async function fetchTopics() {
+    try {
+      const res = await fetch('/api/topic-signals')
+      const data = await res.json()
+      setTopics(data.topics ?? [])
+    } catch {
+      // fail silently
+    }
+  }
+
+  async function handleScan() {
+    setIsScanning(true)
+    setScanResult(null)
+    try {
+      const res = await fetch('/api/scan', { method: 'POST' })
+      const data = await res.json()
+      if (data.success) {
+        setScanResult({
+          ok: true,
+          msg: `✓ 掃描完成：${data.results.videos_saved} 條新片，${data.results.topics_saved} 個新話題`,
+        })
+        await fetchVideos()
+        await fetchTopics()
+      } else {
+        setScanResult({ ok: false, msg: `✗ ${data.error ?? '掃描失敗'}` })
+      }
+    } catch {
+      setScanResult({ ok: false, msg: '✗ 網絡錯誤' })
+    } finally {
+      setIsScanning(false)
     }
   }
 
@@ -493,6 +704,7 @@ export default function HomePage() {
   const topOutlier = videos.length
     ? Math.max(...videos.map((v) => v.outlier_ratio)).toFixed(1)
     : '0.0'
+  const newTopics = topics.filter((t) => t.status === 'new').length
 
   return (
     <>
@@ -576,24 +788,44 @@ export default function HomePage() {
 
         {/* Main */}
         <main className="main">
+
+          {/* Header */}
           <div className="main-header">
             <div>
               <div className="main-title">Youtube Idea Collection</div>
               <div className="main-sub">按 Views ÷ Subscribers 排列 · 數字愈高愈爆</div>
             </div>
-            <div className="sort-row">
-              排序：
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-              >
-                <option value="outlier_ratio">爆款指數</option>
-                <option value="views">播放量</option>
-                <option value="created_at">最新加入</option>
-              </select>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <button
+                  className="scan-btn"
+                  onClick={handleScan}
+                  disabled={isScanning}
+                  type="button"
+                >
+                  {isScanning ? '掃描中…' : '🔍 掃描新爆款'}
+                </button>
+                <div className="sort-row">
+                  排序：
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                  >
+                    <option value="outlier_ratio">爆款指數</option>
+                    <option value="views">播放量</option>
+                    <option value="created_at">最新加入</option>
+                  </select>
+                </div>
+              </div>
+              {scanResult && (
+                <div className={`scan-result${scanResult.ok ? '' : ' error'}`}>
+                  {scanResult.msg}
+                </div>
+              )}
             </div>
           </div>
 
+          {/* Stats */}
           <div className="stats-row">
             <div className="stat-card">
               <div className="stat-card-num">{videos.length}</div>
@@ -613,91 +845,177 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="table-wrap">
-            <div className="table-head">
-              <div>影片</div>
-              <div>Views</div>
-              <div>Likes</div>
-              <div>Comments</div>
-              <div>Subscribers</div>
-              <div>爆款指數</div>
-              <div>地區</div>
-              <div>時長</div>
-            </div>
+          {/* Tabs */}
+          <div className="tabs">
+            <button
+              className={`tab${activeTab === 'topics' ? ' active' : ''}`}
+              onClick={() => setActiveTab('topics')}
+              type="button"
+            >
+              話題信號 {newTopics > 0 && `(${newTopics} 新)`}
+            </button>
+            <button
+              className={`tab${activeTab === 'videos' ? ' active' : ''}`}
+              onClick={() => setActiveTab('videos')}
+              type="button"
+            >
+              影片收藏 ({videos.length})
+            </button>
+          </div>
 
-            <div className="table-body">
-              {loadingVideos ? (
-                <div className="empty-state">載入中…</div>
-              ) : sorted.length === 0 ? (
+          {/* Topic Signals */}
+          {activeTab === 'topics' && (
+            <div className="topics-section">
+              {topics.length === 0 ? (
                 <div className="empty-state">
-                  尚未收藏任何影片。<br />
-                  在左側貼入 YouTube URL 開始分析。
+                  尚未有話題信號。<br />
+                  按右上角「🔍 掃描新爆款」開始發現話題。
                 </div>
               ) : (
-                sorted.map((v) => {
-                  const ol = outlierLabel(v.outlier_ratio)
-                  const isExpanded = expandedId === v.id
-                  return (
-                    <div key={v.id}>
+                [...topics]
+                  .sort((a, b) => b.max_outlier_ratio - a.max_outlier_ratio)
+                  .map((topic) => {
+                    const isExpanded = expandedId === topic.id
+                    return (
                       <div
-                        className="video-row"
-                        onClick={() => setExpandedId(isExpanded ? null : v.id)}
+                        key={topic.id}
+                        className={`topic-card${topic.status === 'new' ? ' new' : ''}`}
+                        onClick={() => setExpandedId(isExpanded ? null : topic.id)}
                       >
-                        <div>
-                          <div className="video-title-zh">{v.title_zh || v.title_original}</div>
-                          {v.title_zh && v.title_original && (
-                            <div className="video-title-en">{v.title_original}</div>
-                          )}
-                          <div className="video-channel">{v.channel_name}</div>
-                          {v.region && <span className="video-region">{v.region}</span>}
-                        </div>
-                        <div>
-                          <div className="col-val">{fmtNum(v.views)}</div>
-                        </div>
-                        <div>
-                          <div className="col-val">{fmtNum(v.likes)}</div>
-                        </div>
-                        <div>
-                          <div className="col-val">{fmtNum(v.comments)}</div>
-                        </div>
-                        <div>
-                          <div className="col-val">{fmtNum(v.subscribers)}</div>
-                        </div>
-                        <div>
-                          <div
-                            className="outlier-badge"
-                            style={{ background: ol.color + '22', color: ol.color }}
-                          >
-                            {v.outlier_ratio.toFixed(1)}x
+                        <div className="topic-card-main">
+                          <div>
+                            <div className="topic-zh">
+                              {topic.topic_zh}
+                              {topic.status === 'new' && (
+                                <span className="new-badge">New</span>
+                              )}
+                            </div>
+                            {topic.topic_en && (
+                              <div className="topic-en">{topic.topic_en}</div>
+                            )}
+                            {topic.related_channels?.length > 0 && (
+                              <div className="topic-channels">
+                                {topic.related_channels.slice(0, 4).join(' · ')}
+                              </div>
+                            )}
                           </div>
-                          <div className="col-sub">{ol.label}</div>
+                          <div className="topic-metric">
+                            <div className="topic-metric-num">{topic.signal_count}</div>
+                            <div className="topic-metric-label">信號數量</div>
+                          </div>
+                          <div className="topic-metric">
+                            <div className="topic-metric-num">
+                              {topic.max_outlier_ratio.toFixed(1)}x
+                            </div>
+                            <div className="topic-metric-label">最高爆款</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="col-val" style={{ fontSize: '13px' }}>{v.region ?? '—'}</div>
-                        </div>
-                        <div>
-                          <div className="col-val" style={{ fontSize: '13px' }}>{v.duration ?? '—'}</div>
-                        </div>
-                      </div>
 
-                      {isExpanded && (
-                        <div className="expand-row">
-                          <div className="expand-grid">
-                            {v.ai_analysis && (
+                        {isExpanded && (
+                          <div className="topic-expand">
+                            {topic.ai_analysis && (
                               <div>
-                                <div className="expand-label">AI 內容分析</div>
-                                <div className="expand-text">{v.ai_analysis}</div>
+                                <div className="topic-expand-label">點解爆</div>
+                                <div className="topic-expand-text">{topic.ai_analysis}</div>
                               </div>
                             )}
-                            {v.description && (
+                            {topic.soon_angle && (
                               <div>
-                                <div className="expand-label">你的觀察</div>
-                                <div className="expand-text">{v.description}</div>
+                                <div className="topic-expand-label">SOON 角度</div>
+                                <div className="topic-expand-text">{topic.soon_angle}</div>
                               </div>
                             )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })
+              )}
+            </div>
+          )}
+
+          {/* Videos Table */}
+          {activeTab === 'videos' && (
+            <div className="table-wrap">
+              <div className="table-head">
+                <div>影片</div>
+                <div>Views</div>
+                <div>Likes</div>
+                <div>Comments</div>
+                <div>Subscribers</div>
+                <div>爆款指數</div>
+                <div>地區</div>
+                <div>時長</div>
+              </div>
+
+              <div className="table-body">
+                {loadingVideos ? (
+                  <div className="empty-state">載入中…</div>
+                ) : sorted.length === 0 ? (
+                  <div className="empty-state">
+                    尚未收藏任何影片。<br />
+                    在左側貼入 YouTube URL 開始分析。
+                  </div>
+                ) : (
+                  sorted.map((v) => {
+                    const ol = outlierLabel(v.outlier_ratio)
+                    const isExpanded = expandedId === v.id
+                    return (
+                      <div key={v.id}>
+                        <div
+                          className="video-row"
+                          onClick={() => setExpandedId(isExpanded ? null : v.id)}
+                        >
+                          <div>
+                            <div className="video-title-zh">{v.title_zh || v.title_original}</div>
+                            {v.title_zh && v.title_original && (
+                              <div className="video-title-en">{v.title_original}</div>
+                            )}
+                            <div className="video-channel">{v.channel_name}</div>
+                            {v.region && <span className="video-region">{v.region}</span>}
+                          </div>
+                          <div><div className="col-val">{fmtNum(v.views)}</div></div>
+                          <div><div className="col-val">{fmtNum(v.likes)}</div></div>
+                          <div><div className="col-val">{fmtNum(v.comments)}</div></div>
+                          <div><div className="col-val">{fmtNum(v.subscribers)}</div></div>
+                          <div>
+                            <div
+                              className="outlier-badge"
+                              style={{ background: ol.color + '22', color: ol.color }}
+                            >
+                              {v.outlier_ratio.toFixed(1)}x
+                            </div>
+                            <div className="col-sub">{ol.label}</div>
                           </div>
                           <div>
-                            <a
+                            <div className="col-val" style={{ fontSize: '13px' }}>
+                              {v.region ?? '—'}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="col-val" style={{ fontSize: '13px' }}>
+                              {v.duration ?? '—'}
+                            </div>
+                          </div>
+                        </div>
+
+                        {isExpanded && (
+                          <div className="expand-row">
+                            <div className="expand-grid">
+                              {v.ai_analysis && (
+                                <div>
+                                  <div className="expand-label">AI 內容分析</div>
+                                  <div className="expand-text">{v.ai_analysis}</div>
+                                </div>
+                              )}
+                              {v.description && (
+                                <div>
+                                  <div className="expand-label">你的觀察</div>
+                                  <div className="expand-text">{v.description}</div>
+                                </div>
+                              )}
+                            </div>
+                            
                               href={v.video_url}
                               target="_blank"
                               rel="noreferrer"
@@ -707,14 +1025,15 @@ export default function HomePage() {
                               → 睇原片 ↗
                             </a>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })
-              )}
+                        )}
+                      </div>
+                    )
+                  })
+                )}
+              </div>
             </div>
-          </div>
+          )}
+
         </main>
       </div>
     </>
