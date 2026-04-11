@@ -578,7 +578,7 @@ export default function HomePage() {
         <main className="main">
           <div className="main-header">
             <div>
-              <div className="main-title">爆款 Collection</div>
+              <div className="main-title">Youtube Idea Collection</div>
               <div className="main-sub">按 Views ÷ Subscribers 排列 · 數字愈高愈爆</div>
             </div>
             <div className="sort-row">
