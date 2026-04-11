@@ -10,9 +10,9 @@ type PageParams = { id: string }
 export default async function SavedIdeaDetailPage({
   params,
 }: {
-  params: Promise<PageParams> | PageParams
+  params: Promise<PageParams>
 }) {
-  const { id } = await Promise.resolve(params)
+  const { id } = await params
   const { row } = await getSavedYoutubeIdeaById(id)
 
   if (!row) {
