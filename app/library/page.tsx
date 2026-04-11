@@ -2,6 +2,8 @@ import Link from 'next/link'
 
 import { listSavedYoutubeIdeas } from '@/lib/supabase'
 
+export const dynamic = 'force-dynamic'
+
 function modeLabel(mode: string) {
   if (mode === 'keyword') return '關鍵字'
   if (mode === 'channel_url') return '頻道 URL'

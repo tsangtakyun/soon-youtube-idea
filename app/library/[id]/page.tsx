@@ -3,10 +3,16 @@ import { notFound } from 'next/navigation'
 
 import { getSavedYoutubeIdeaById } from '@/lib/supabase'
 
-type Params = Promise<{ id: string }>
+export const dynamic = 'force-dynamic'
 
-export default async function SavedIdeaDetailPage({ params }: { params: Params }) {
-  const { id } = await params
+type PageParams = { id: string }
+
+export default async function SavedIdeaDetailPage({
+  params,
+}: {
+  params: Promise<PageParams> | PageParams
+}) {
+  const { id } = await Promise.resolve(params)
   const { row } = await getSavedYoutubeIdeaById(id)
 
   if (!row) {
