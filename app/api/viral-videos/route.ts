@@ -208,3 +208,25 @@ export async function GET() {
 
   return NextResponse.json({ videos: data })
 }
+
+
+export async function DELETE(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+  if (!id) return Response.json({ error: 'Missing id' }, { status: 400 })
+  const supabase = createAdminSupabase()
+  if (!supabase) return Response.json({ error: 'Supabase 未設定' }, { status: 500 })
+  const { error } = await supabase.from('viral_videos').delete().eq('id', id)
+  if (error) return Response.json({ error: error.message }, { status: 500 })
+  return Response.json({ success: true })
+}
+
+export async function PATCH(request: Request) {
+  const { id, selected } = await request.json()
+  if (!id) return Response.json({ error: 'Missing id' }, { status: 400 })
+  const supabase = createAdminSupabase()
+  if (!supabase) return Response.json({ error: 'Supabase 未設定' }, { status: 500 })
+  const { error } = await supabase.from('viral_videos').update({ selected }).eq('id', id)
+  if (error) return Response.json({ error: error.message }, { status: 500 })
+  return Response.json({ success: true })
+}
