@@ -262,7 +262,7 @@ export default function HomePage() {
       const data = await res.json()
       if (data.success) {
         setOutlineProgress(100)
-        window.open(`/outline/${data.outlineId}`, '_blank')
+        window.location.href = `/outline/${data.outlineId}`
       }
     } finally {
       window.setTimeout(() => {
