@@ -175,8 +175,28 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<'videos' | 'topics' | 'selected'>('topics')
   const [isScanning, setIsScanning] = useState(false)
   const [scanResult, setScanResult] = useState<{ msg: string; ok: boolean } | null>(null)
+  const [outliningId, setOutliningId] = useState<string | null>(null)
+  const [outlineProgress, setOutlineProgress] = useState(0)
 
   useEffect(() => { fetchVideos(); fetchTopics() }, [])
+
+  useEffect(() => {
+    if (!outliningId) {
+      setOutlineProgress(0)
+      return
+    }
+
+    const timer = window.setInterval(() => {
+      setOutlineProgress((current) => {
+        if (current >= 92) return current
+        if (current < 30) return current + 9
+        if (current < 60) return current + 6
+        return current + 3
+      })
+    }, 350)
+
+    return () => window.clearInterval(timer)
+  }, [outliningId])
 
   async function fetchVideos() {
     setLoadingVideos(true)
@@ -231,14 +251,24 @@ export default function HomePage() {
   }
 
   async function handleGenerateOutline(id: string) {
-    const res = await fetch('/api/outline', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ videoId: id }),
-    })
-    const data = await res.json()
-    if (data.success) {
-      window.open(`/outline/${data.outlineId}`, '_blank')
+    setOutliningId(id)
+    setOutlineProgress(6)
+    try {
+      const res = await fetch('/api/outline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId: id }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setOutlineProgress(100)
+        window.open(`/outline/${data.outlineId}`, '_blank')
+      }
+    } finally {
+      window.setTimeout(() => {
+        setOutliningId((current) => (current === id ? null : current))
+        setOutlineProgress(0)
+      }, 450)
     }
   }
 
@@ -460,7 +490,9 @@ export default function HomePage() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
                       <a href={v.video_url} target="_blank" rel="noreferrer" style={{ color: '#7c83d6', fontSize: '13px' }}>睇原片 ↗</a>
-                      <button className="action-btn btn-outline" onClick={() => handleGenerateOutline(v.id)} type="button">生成大綱 →</button>
+                      <button className="action-btn btn-outline" onClick={() => handleGenerateOutline(v.id)} type="button" disabled={outliningId === v.id} style={outliningId === v.id ? { opacity: 0.85, cursor: 'not-allowed' } : undefined}>
+                        {outliningId === v.id ? `生成中 ${outlineProgress}%` : '生成大綱 →'}
+                      </button>
                       <button className="action-btn btn-unselect" onClick={() => handleSelect(v.id, false)} type="button">移出已選</button>
                       <button className="action-btn btn-delete" onClick={() => handleDelete(v.id)} type="button">刪除</button>
                     </div>
