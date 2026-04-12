@@ -16,7 +16,7 @@ type OutlineSection = {
   key: string
   title: string
   purpose: string
-  methodOptions: string[]
+  methodOptions: readonly string[]
   principle: string
   content: string
 }
