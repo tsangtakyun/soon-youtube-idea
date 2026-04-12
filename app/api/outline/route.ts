@@ -159,23 +159,20 @@ export async function POST(request: Request) {
     const aiRes = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 2000,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content: prompt }, { role: 'assistant', content: '{' }],
     })
 
     const raw = aiRes.content.map((p) => ('text' in p ? p.text : '')).join('').trim()
-    const jsonStart = raw.indexOf('{')
-    const jsonEnd = raw.lastIndexOf('}')
+    // assistant prefill 添加了 '{'，所以 raw 已符合 JSON 格式
+    const jsonStr = '{' + raw
+    const jsonEnd = jsonStr.lastIndexOf('}')
     let structured
 
-    if (jsonStart === -1 || jsonEnd === -1) {
+    try {
+      const parsed = JSON.parse(jsonStr.slice(0, jsonEnd + 1))
+      structured = normalizeStructuredOutline(parsed, video.title_zh || video.title_original)
+    } catch {
       structured = buildFallbackStructuredOutline(raw, video.title_zh || video.title_original)
-    } else {
-      try {
-        const parsed = JSON.parse(raw.slice(jsonStart, jsonEnd + 1))
-        structured = normalizeStructuredOutline(parsed, video.title_zh || video.title_original)
-      } catch {
-        structured = buildFallbackStructuredOutline(raw, video.title_zh || video.title_original)
-      }
     }
 
     const content = JSON.stringify(structured)
