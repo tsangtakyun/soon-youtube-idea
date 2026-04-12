@@ -41,8 +41,8 @@ type TopicSignal = {
 
 const REGIONS = [
   '中國大陸', '香港', '台灣', '日本', '韓國',
-  '泰國', '印尼', '菲律賓', '越南', '马来西亚',
-  '新加坡', '印度', '其他亚洲', '其他',
+  '泰國', '印尼', '菲律賓', '越南', '馬來西亞',
+  '新加坡', '印度', '其他亞洲', '其他',
 ]
 
 function fmtNum(n: number) {
@@ -123,6 +123,7 @@ select option { background: #1a1c2e; }
 .btn-select { background: rgba(105,219,124,0.15); color: #8ce99a; }
 .btn-delete { background: rgba(255,107,107,0.15); color: #ffa8a8; }
 .btn-unselect { background: rgba(255,165,0,0.15); color: #ffa94d; }
+.btn-outline { background: rgba(124,131,214,0.15); color: #a5adde; }
 .expand-row { grid-column: 1 / -1; background: rgba(255,255,255,0.02); border-top: 1px solid rgba(255,255,255,0.05); padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
 .expand-label { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #6b74c4; margin-bottom: 4px; }
 .expand-text { font-size: 14px; color: #c5caf0; line-height: 1.7; }
@@ -200,9 +201,9 @@ export default function HomePage() {
       const res = await fetch('/api/scan', { method: 'POST' })
       const data = await res.json()
       if (data.success) {
-        setScanResult({ ok: true, msg: `✓ 描描完成：${data.results.videos_saved} 條新片，${data.results.topics_saved} 個新話題` })
+        setScanResult({ ok: true, msg: `✓ 掃描完成：${data.results.videos_saved} 條新片，${data.results.topics_saved} 個新話題` })
         await fetchVideos(); await fetchTopics()
-      } else { setScanResult({ ok: false, msg: `✗ ${data.error ?? '描描失敗'}` }) }
+      } else { setScanResult({ ok: false, msg: `✗ ${data.error ?? '掃描失敗'}` }) }
     } catch { setScanResult({ ok: false, msg: '✗ 網絡錯誤' }) }
     finally { setIsScanning(false) }
   }
@@ -227,6 +228,18 @@ export default function HomePage() {
     } catch (err) {
       setStatus({ type: 'error', msg: err instanceof Error ? err.message : '網絡錯誤' })
     } finally { setIsPending(false) }
+  }
+
+  async function handleGenerateOutline(id: string) {
+    const res = await fetch('/api/outline', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ videoId: id }),
+    })
+    const data = await res.json()
+    if (data.success) {
+      window.open(`/outline/${data.outlineId}`, '_blank')
+    }
   }
 
   async function handleDelete(id: string) {
@@ -269,7 +282,7 @@ export default function HomePage() {
           {loadingVideos ? (
             <div className="empty-state">載入中…</div>
           ) : list.length === 0 ? (
-            <div className="empty-state">將將將將將將</div>
+            <div className="empty-state">尚未有影片</div>
           ) : list.map(v => {
             const ol = outlierLabel(v.outlier_ratio)
             const isExp = expandedId === v.id
@@ -308,7 +321,7 @@ export default function HomePage() {
                       {v.ai_analysis && <div><div className="expand-label">AI 內容分析</div><div className="expand-text">{v.ai_analysis}</div></div>}
                       {v.description && <div><div className="expand-label">你的觀察</div><div className="expand-text">{v.description}</div></div>}
                     </div>
-                    <a href={v.video_url} target="_blank" rel="noreferrer" style={{ color: '#7c83d6', fontSize: '13px' }} onClick={e => e.stopPropagation()}>→ 睹原片 ↗</a>
+                    <a href={v.video_url} target="_blank" rel="noreferrer" style={{ color: '#7c83d6', fontSize: '13px' }} onClick={e => e.stopPropagation()}>→ 睇原片 ↗</a>
                   </div>
                 )}
               </div>
@@ -336,7 +349,7 @@ export default function HomePage() {
           </div>
           <div className="field-group">
             <div className="field-label">02 · 描述（你的觀察）</div>
-            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="點解覺得呢條片値得收藏？有和特別嚅切入角度或爆款原因…" />
+            <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="點解覺得呢條片值得收藏？有咩特別嘅切入角度或爆款原因…" />
           </div>
           <div className="field-group">
             <div className="field-label">03 · 國家 / 地區</div>
@@ -370,7 +383,7 @@ export default function HomePage() {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                 <button className="scan-btn" onClick={handleScan} disabled={isScanning} type="button">
-                  {isScanning ? '描描中…' : '🔍 描描新爆款'}
+                  {isScanning ? '掃描中…' : '🔍 掃描新爆款'}
                 </button>
                 <div className="sort-row">
                   排序：
@@ -398,7 +411,7 @@ export default function HomePage() {
           {activeTab === 'topics' && (
             <div className="topics-section">
               {topics.length === 0 ? (
-                <div className="empty-state">尚未有話題信號。<br />按右上角「🔍 描描新爆款」開始發現話題。</div>
+                <div className="empty-state">尚未有話題信號。<br />按右上角「🔍 掃描新爆款」開始發現話題。</div>
               ) : (
                 [...topics].sort((a, b) => b.max_outlier_ratio - a.max_outlier_ratio).map(topic => {
                   const isExp = expandedId === topic.id
@@ -429,7 +442,7 @@ export default function HomePage() {
           {activeTab === 'selected' && (
             <div className="selected-section">
               {selected.length === 0 ? (
-                <div className="empty-state">尚未選擇任何題目。<br />在「影片收藏」 tab 按「已選」將題目移來這裡。</div>
+                <div className="empty-state">尚未選擇任何題目。<br />在「影片收藏」tab 按「已選」將題目移來這裡。</div>
               ) : selected.map(v => {
                 const ol = outlierLabel(v.outlier_ratio)
                 return (
@@ -446,7 +459,8 @@ export default function HomePage() {
                       {v.ai_analysis && <div style={{ marginTop: '10px', fontSize: '13px', color: '#a5adde', lineHeight: '1.6' }}>{v.ai_analysis}</div>}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
-                      <a href={v.video_url} target="_blank" rel="noreferrer" style={{ color: '#7c83d6', fontSize: '13px' }}>睹原片 ↗</a>
+                      <a href={v.video_url} target="_blank" rel="noreferrer" style={{ color: '#7c83d6', fontSize: '13px' }}>睇原片 ↗</a>
+                      <button className="action-btn btn-outline" onClick={() => handleGenerateOutline(v.id)} type="button">生成大綱 →</button>
                       <button className="action-btn btn-unselect" onClick={() => handleSelect(v.id, false)} type="button">移出已選</button>
                       <button className="action-btn btn-delete" onClick={() => handleDelete(v.id)} type="button">刪除</button>
                     </div>
