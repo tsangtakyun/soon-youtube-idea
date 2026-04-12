@@ -67,7 +67,7 @@ function buildStructuredOutlinePrompt(video: Record<string, unknown>) {
     `   目的: ${s.purpose}`,
     `   原則: ${s.principle}`,
     `   做法: ${s.methodOptions.join(' / ')}`,
-    `   要求: 必須用繁體中文寫出具體內容，200-400字，可直接用作創作參考。`,
+    `   要求: 用繁體中文寫出方向指引，50-80字：呢段講咍角度、用咍切入方式、需要找咍素材。唔好寫劇本內容。`,
   ].join('\n')).join('\n\n')
 
   return [
@@ -158,7 +158,7 @@ export async function POST(request: Request) {
 
     const aiRes = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 4000,
+      max_tokens: 2000,
       messages: [{ role: 'user', content: prompt }],
     })
 
