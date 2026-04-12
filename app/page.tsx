@@ -253,6 +253,7 @@ export default function HomePage() {
   async function handleGenerateOutline(id: string) {
     setOutliningId(id)
     setOutlineProgress(6)
+    setStatus({ type: 'loading', msg: '正在生成內容大綱，完成後會自動跳轉…' })
     try {
       const res = await fetch('/api/outline', {
         method: 'POST',
@@ -260,10 +261,18 @@ export default function HomePage() {
         body: JSON.stringify({ videoId: id }),
       })
       const data = await res.json()
+      if (!res.ok || !data.success || !data.outlineId) {
+        setStatus({ type: 'error', msg: data.error ?? '內容大綱生成失敗' })
+        return
+      }
+
       if (data.success) {
         setOutlineProgress(100)
+        setStatus({ type: 'success', msg: '✓ 內容大綱已生成，正在跳轉…' })
         window.location.href = `/outline/${data.outlineId}`
       }
+    } catch (err) {
+      setStatus({ type: 'error', msg: err instanceof Error ? err.message : '內容大綱生成失敗' })
     } finally {
       window.setTimeout(() => {
         setOutliningId((current) => (current === id ? null : current))

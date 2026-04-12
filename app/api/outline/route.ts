@@ -151,6 +151,23 @@ function normalizeStructuredOutline(raw: any, fallbackTitle: string) {
   }
 }
 
+function buildFallbackStructuredOutline(rawText: string, fallbackTitle: string) {
+  return {
+    pageTitle: fallbackTitle || 'SOON 內容大綱',
+    suggestedTitles: [
+      fallbackTitle || 'SOON 片名建議 1',
+      `${fallbackTitle || 'SOON'}｜香港視角切入`,
+      `${fallbackTitle || 'SOON'}｜亞洲現象拆解`,
+    ],
+    caption: rawText,
+    coreAngle: '以香港視角切入，拆解現象背後嘅文化、制度同亞洲脈絡。',
+    sections: SECTION_GUIDES.map((section) => ({
+      key: section.key,
+      content: '',
+    })),
+  }
+}
+
 const SOON_TEMPLATE = [
   '# SOON 內容模版',
   '頻道定位: The Insider\'s Asia — 香港人視角，用英文講亞洲現象。局內人分析。',
@@ -200,12 +217,19 @@ export async function POST(request: Request) {
     const raw = aiRes.content.map((p) => ('text' in p ? p.text : '')).join('').trim()
     const jsonStart = raw.indexOf('{')
     const jsonEnd = raw.lastIndexOf('}')
+    let structured
+
     if (jsonStart === -1 || jsonEnd === -1) {
-      return NextResponse.json({ error: 'AI 回傳格式錯誤' }, { status: 500 })
+      structured = buildFallbackStructuredOutline(raw, video.title_zh || video.title_original)
+    } else {
+      try {
+        const parsed = JSON.parse(raw.slice(jsonStart, jsonEnd + 1))
+        structured = normalizeStructuredOutline(parsed, video.title_zh || video.title_original)
+      } catch {
+        structured = buildFallbackStructuredOutline(raw, video.title_zh || video.title_original)
+      }
     }
 
-    const parsed = JSON.parse(raw.slice(jsonStart, jsonEnd + 1))
-    const structured = normalizeStructuredOutline(parsed, video.title_zh || video.title_original)
     const content = JSON.stringify(structured)
 
     const { data: outline, error: outlineError } = await supabase
