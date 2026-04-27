@@ -8,12 +8,14 @@ async function searchYouTubeVideos(keyword: string, maxResults = 20) {
   const apiKey = process.env.YOUTUBE_API_KEY
   if (!apiKey) return []
   try {
-    const params = new URLSearchParams({
+    const publishedAfter = new Date(Date.now() - 730 * 24 * 60 * 60 * 1000).toISOString()
+  const params = new URLSearchParams({
       part: 'snippet',
       q: keyword,
       type: 'video',
       order: 'viewCount',
       videoDuration: 'medium',
+    publishedAfter,
       maxResults: String(maxResults),
       key: apiKey,
     })
@@ -39,7 +41,8 @@ async function getVideoStats(videoIds: string[]) {
   const apiKey = process.env.YOUTUBE_API_KEY
   if (!apiKey || !videoIds.length) return {}
   try {
-    const params = new URLSearchParams({
+    const publishedAfter = new Date(Date.now() - 730 * 24 * 60 * 60 * 1000).toISOString()
+  const params = new URLSearchParams({
       part: 'statistics,contentDetails',
       id: videoIds.join(','),
       key: apiKey,
@@ -77,7 +80,8 @@ async function getChannelSubs(channelIds: string[]) {
   if (!apiKey || !channelIds.length) return {}
   try {
     const unique = [...new Set(channelIds)]
-    const params = new URLSearchParams({
+    const publishedAfter = new Date(Date.now() - 730 * 24 * 60 * 60 * 1000).toISOString()
+  const params = new URLSearchParams({
       part: 'statistics',
       id: unique.join(','),
       key: apiKey,
