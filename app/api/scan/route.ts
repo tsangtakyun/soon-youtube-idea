@@ -111,7 +111,7 @@ export async function POST() {
   const results = { keywords_scanned: 0, videos_found: 0, videos_saved: 0, topics_saved: 0 }
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-    const kwsToScan = keywords.slice(0, 3)
+    const kwsToScan = keywords.sort(() => Math.random() - 0.5).slice(0, 5)
   for (const kw of kwsToScan) {
     results.keywords_scanned++
     const searchResults = await searchYouTubeVideos(kw.keyword, 20)
