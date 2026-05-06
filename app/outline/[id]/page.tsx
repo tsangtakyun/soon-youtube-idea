@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 
+import { buildHandoffUrlFromOutline } from '@/lib/script-handoff'
+
 type Outline = {
   id: string
   created_at: string
@@ -233,6 +235,12 @@ export default function OutlinePage() {
     setGeneratingAll(false)
   }
 
+  function handleGenerateScript() {
+    if (!outline) return
+    const url = buildHandoffUrlFromOutline(outline)
+    window.open(url, '_blank')
+  }
+
   return (
     <>
       <style>{CSS}</style>
@@ -253,6 +261,9 @@ export default function OutlinePage() {
             <div className="action-row">
               <button className="btn-gen-all" onClick={handleGenerateAll} disabled={generatingAll || !!generatingSection} type="button">
                 {generatingAll ? '生成全部段落中…' : '🤖 生成全部段落'}
+              </button>
+              <button className="btn-save" onClick={handleGenerateScript} disabled={!outline} type="button">
+                生成劇本（傳到 Script Generator）
               </button>
               <button className="btn-save" onClick={handleSave} disabled={saving} type="button">
                 {saving ? '儲存中…' : '儲存修改'}
