@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { buildHandoffUrlFromOutline } from '@/lib/script-handoff'
 
 type ViralVideo = {
   id: string
@@ -269,7 +270,12 @@ export default function HomePage() {
       if (data.success) {
         setOutlineProgress(100)
         setStatus({ type: 'success', msg: '✓ 內容大綱已生成，正在跳轉…' })
-        window.location.href = `/outline/${data.outlineId}`
+        const handoffUrl = buildHandoffUrlFromOutline({
+          id: data.outlineId,
+          video_id: id,
+          content: typeof data.content === 'string' ? data.content : JSON.stringify(data.content ?? {}),
+        })
+        window.location.href = handoffUrl
       }
     } catch (err) {
       setStatus({ type: 'error', msg: err instanceof Error ? err.message : '內容大綱生成失敗' })

@@ -1,6 +1,6 @@
 const SCRIPT_GENERATOR_URL =
   process.env.NEXT_PUBLIC_SCRIPT_GENERATOR_URL ||
-  'https://script-generator-xi-pi.vercel.app'
+  'https://script-generator-youtube.vercel.app'
 
 const MAX_BACKGROUND_CHARS = 1000
 const MAX_ADDITIONAL_REFS = 19
