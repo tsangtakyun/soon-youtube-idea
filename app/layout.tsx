@@ -13,32 +13,31 @@ function NavBar() {
     <nav
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000,
-        background: 'linear-gradient(180deg, #252845 0%, #21233d 100%)',
-        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        background: '#0f0f0f',
+        borderBottom: '0.5px solid var(--soon-border)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 20px', height: '62px',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.22)',
       }}
     >
-      <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', fontSize: '15px', fontWeight: 700, color: '#f5f7ff', textDecoration: 'none' }}>
+      <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', fontSize: '15px', fontWeight: 700, color: 'var(--soon-text)', textDecoration: 'none' }}>
         <span style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
-          <span style={{ width: '10px', height: '10px', borderRadius: '999px', background: '#ff7d4d' }} />
-          <span style={{ width: '10px', height: '10px', borderRadius: '999px', background: '#8b7dff' }} />
-          <span style={{ width: '10px', height: '10px', borderRadius: '999px', background: '#5f89ff' }} />
+          <span style={{ width: '10px', height: '10px', borderRadius: '999px', background: 'var(--soon-purple)' }} />
+          <span style={{ width: '10px', height: '10px', borderRadius: '999px', background: 'var(--soon-purple-light)' }} />
+          <span style={{ width: '10px', height: '10px', borderRadius: '999px', background: 'var(--soon-success)' }} />
         </span>
         SOON Internal
       </Link>
       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-        <Link href="/" style={{ fontSize: '13px', color: '#eef1ff', textDecoration: 'none', padding: '9px 14px', letterSpacing: '0.03em', borderRadius: '999px', background: 'rgba(139,125,255,0.22)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <Link href="/" style={{ fontSize: '13px', color: '#fff', textDecoration: 'none', padding: '9px 14px', letterSpacing: '0.03em', borderRadius: 'var(--soon-radius)', background: 'var(--soon-purple)', border: '0.5px solid rgba(124,58,237,0.3)' }}>
           題材
         </Link>
-        <Link href="/trends" style={{ fontSize: '13px', color: '#cfd5ff', textDecoration: 'none', padding: '9px 14px', letterSpacing: '0.03em', borderRadius: '999px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <Link href="/trends" style={{ fontSize: '13px', color: 'var(--soon-text-secondary)', textDecoration: 'none', padding: '9px 14px', letterSpacing: '0.03em', borderRadius: 'var(--soon-radius)', background: 'transparent', border: '0.5px solid var(--soon-border)' }}>
           🔥 趨勢雷達
         </Link>
-        <Link href="/library" style={{ fontSize: '13px', color: '#cfd5ff', textDecoration: 'none', padding: '9px 14px', letterSpacing: '0.03em', borderRadius: '999px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <Link href="/library" style={{ fontSize: '13px', color: 'var(--soon-text-secondary)', textDecoration: 'none', padding: '9px 14px', letterSpacing: '0.03em', borderRadius: 'var(--soon-radius)', background: 'transparent', border: '0.5px solid var(--soon-border)' }}>
           題材庫
         </Link>
-        <a href="https://idea-brainstorm.vercel.app" style={{ fontSize: '13px', color: '#cfd5ff', textDecoration: 'none', padding: '9px 14px', letterSpacing: '0.03em', borderRadius: '999px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <a href="https://idea-brainstorm.vercel.app" style={{ fontSize: '13px', color: 'var(--soon-text-secondary)', textDecoration: 'none', padding: '9px 14px', letterSpacing: '0.03em', borderRadius: 'var(--soon-radius)', background: 'transparent', border: '0.5px solid var(--soon-border)' }}>
           IG 題材庫
         </a>
       </div>
@@ -49,7 +48,10 @@ function NavBar() {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-HK">
-      <body style={{ paddingTop: '78px', margin: 0, fontFamily: '"SF Pro Rounded", "SF Pro Display", ui-sans-serif, system-ui, sans-serif', background: '#1d2037', color: '#eef1ff' }}>
+      <head>
+        <link rel="stylesheet" href="/soon-design-system.css" />
+      </head>
+      <body style={{ paddingTop: '78px', margin: 0, fontFamily: 'system-ui, sans-serif', background: 'var(--soon-bg)', color: 'var(--soon-text)' }}>
         <NavBar />
         {children}
       </body>
