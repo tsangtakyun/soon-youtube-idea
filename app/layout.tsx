@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
+import { EmbeddedMode } from '@/components/EmbeddedMode'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
 function NavBar() {
   return (
     <nav
+      className="soon-hide-embedded"
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000,
         background: '#0f0f0f',
@@ -52,6 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="stylesheet" href="/soon-design-system.css" />
       </head>
       <body style={{ paddingTop: '78px', margin: 0, fontFamily: 'system-ui, sans-serif', background: 'var(--soon-bg)', color: 'var(--soon-text)' }}>
+        <EmbeddedMode />
         <NavBar />
         {children}
       </body>
