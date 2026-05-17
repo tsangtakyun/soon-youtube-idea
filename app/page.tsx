@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { buildHandoffUrlFromOutline } from '@/lib/script-handoff'
 
 type ViralVideo = {
   id: string
@@ -59,9 +58,9 @@ const REGIONS = [
 const CSS = `
 * { box-sizing: border-box; }
 body { background: #0a0a0f; color: #f0f0f5; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-.yt-shell { min-height: 100vh; background: #0a0a0f; display: grid; grid-template-columns: 280px minmax(0, 1fr); }
+.yt-shell { min-height: 100vh; background: #0a0a0f; width: 100%; }
 .yt-sidebar { background: #16161f; border-right: 1px solid #2a2a3a; padding: 28px 20px; display: flex; flex-direction: column; gap: 20px; }
-.yt-kicker { font-size: 12px; letter-spacing: .18em; color: #7c5cfc; text-transform: uppercase; }
+.yt-kicker { font-size: 12px; letter-spacing: .18em; color: #5a5a72; text-transform: uppercase; }
 .yt-side-title { font-size: 24px; font-weight: 700; color: #fff; line-height: 1.2; margin-top: 6px; }
 .yt-divider { height: 1px; background: #2a2a3a; }
 .yt-label { font-size: 12px; color: #a7a7c4; margin-bottom: 8px; }
@@ -75,11 +74,14 @@ body { background: #0a0a0f; color: #f0f0f5; font-family: Inter, -apple-system, B
 .yt-status.loading { background: rgba(124,92,252,.12); color: #c4b5fd; }
 .yt-status.success { background: rgba(16,185,129,.12); color: #34d399; }
 .yt-status.error { background: rgba(239,68,68,.12); color: #fca5a5; }
-.yt-main { padding: 32px 32px 64px; display: flex; flex-direction: column; gap: 24px; }
-.yt-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-.yt-title { font-size: 40px; line-height: 1.05; letter-spacing: -.04em; margin: 0; color: #fff; }
-.yt-subtitle { margin-top: 8px; font-size: 14px; color: #a7a7c4; }
-.yt-actions { display: flex; gap: 10px; align-items: center; }
+.yt-main { width: 100%; padding: 32px 32px 64px; display: flex; flex-direction: column; gap: 20px; }
+.yt-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+.yt-title { font-size: 28px; line-height: 1.15; margin: 0; color: #f0f0f5; font-weight: 700; }
+.yt-subtitle { margin-top: 6px; font-size: 13px; color: #9090a8; }
+.yt-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.yt-action-btn { border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.yt-action-btn:disabled { opacity: .55; cursor: not-allowed; }
+.yt-hero { width: 100%; height: 160px; object-fit: cover; object-position: center; border-radius: 12px; display: block; margin-bottom: 20px; }
 .yt-scan { background: transparent; color: #0ea5e9; border: 1px solid #0ea5e9; border-radius: 10px; padding: 9px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .yt-scan:disabled { opacity: .45; cursor: not-allowed; }
 .yt-sort { background: #111118; color: #f0f0f5; border: 1px solid #2a2a3a; border-radius: 10px; padding: 9px 12px; font-size: 13px; }
@@ -87,7 +89,7 @@ body { background: #0a0a0f; color: #f0f0f5; font-family: Inter, -apple-system, B
 .yt-stat-card { background: #16161f; border: 1px solid #2a2a3a; border-radius: 14px; padding: 18px 20px; }
 .yt-stat-num { font-size: 32px; font-weight: 700; color: #fff; }
 .yt-stat-label { margin-top: 6px; font-size: 12px; color: #a7a7c4; }
-.yt-tabs { display: flex; gap: 8px; }
+.yt-tabs { display: none; }
 .yt-tab { background: transparent; color: #a7a7c4; border: 1px solid #2a2a3a; border-radius: 10px; padding: 8px 18px; font-size: 14px; cursor: pointer; }
 .yt-tab.active { background: #7c5cfc; color: #fff; border-color: #7c5cfc; }
 .yt-card { background: #16161f; border: 1px solid #2a2a3a; border-radius: 14px; overflow: hidden; }
@@ -124,9 +126,9 @@ body { background: #0a0a0f; color: #f0f0f5; font-family: Inter, -apple-system, B
 .yt-topic-label { color: #5a5a72; font-size: 11px; margin-top: 4px; }
 .yt-empty { color: #9090a8; text-align: center; padding: 72px 20px; line-height: 1.8; }
 @media (max-width: 1200px) {
-  .yt-shell { grid-template-columns: 1fr; }
-  .yt-sidebar { border-right: none; border-bottom: 1px solid #2a2a3a; }
-  .yt-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .yt-main { padding: 24px; }
+  .yt-header { flex-direction: column; }
+  .yt-actions { justify-content: flex-start; }
   .yt-table-head { display: none; }
   .yt-video-row { grid-template-columns: 1fr; }
 }
@@ -170,11 +172,22 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [scanning, setScanning] = useState(false)
+  const [addPanelOpen, setAddPanelOpen] = useState(false)
+  const [, setUserId] = useState('')
   const [status, setStatus] = useState<{ type: 'loading' | 'success' | 'error'; msg: string } | null>(null)
   const [outliningId, setOutliningId] = useState('')
 
   useEffect(() => {
     void fetchAll()
+  }, [])
+
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type !== 'SOON_AUTH') return
+      setUserId(event.data.userId || '')
+    }
+    window.addEventListener('message', handler)
+    return () => window.removeEventListener('message', handler)
   }, [])
 
   async function fetchAll() {
@@ -230,6 +243,7 @@ export default function HomePage() {
       setVideoUrl('')
       setDescription('')
       setRegion('')
+      setAddPanelOpen(false)
       await fetchAll()
     } catch (error) {
       setStatus({ type: 'error', msg: error instanceof Error ? error.message : '儲存失敗' })
@@ -264,12 +278,22 @@ export default function HomePage() {
       })
       const data = await res.json()
       if (!res.ok || !data.success || !data.outlineId) throw new Error(data.error || '生成大綱失敗')
-      const handoffUrl = buildHandoffUrlFromOutline({
-        id: data.outlineId,
-        video_id: video.id,
-        content: typeof data.content === 'string' ? data.content : JSON.stringify(data.content ?? {}),
-      })
-      window.location.href = handoffUrl
+      let topic = repairText(video.title_zh) || repairText(video.title_original) || ''
+      let background = repairText(video.ai_analysis) || repairText(video.description) || ''
+      try {
+        const content = typeof data.content === 'string' ? JSON.parse(data.content) : data.content
+        topic = content?.pageTitle || topic
+        background = content?.coreAngle || content?.caption || background
+      } catch {
+        // Keep the video fallback if outline content is not JSON.
+      }
+      window.parent.postMessage({
+        type: 'SOON_NAVIGATE_TOOL',
+        pipeline: 'youtube',
+        tool: 'script',
+        topic,
+        background,
+      }, '*')
     } catch (error) {
       setStatus({ type: 'error', msg: error instanceof Error ? error.message : '生成大綱失敗' })
     } finally {
@@ -387,81 +411,85 @@ export default function HomePage() {
     <>
       <style>{CSS}</style>
       <div className="yt-shell">
-        <aside className="yt-sidebar">
-          <div>
-            <div className="yt-kicker">SOON Internal</div>
-            <div className="yt-side-title">爆款影片<br />收藏庫</div>
-          </div>
-          <div className="yt-divider" />
-          <div className="yt-kicker">新增影片</div>
-          <div>
-            <div className="yt-label">01 · YouTube URL</div>
-            <input
-              className="yt-input"
-              value={videoUrl}
-              onChange={(event) => setVideoUrl(event.target.value)}
-              placeholder="https://www.youtube.com/watch?v=..."
-            />
-          </div>
-          <div>
-            <div className="yt-label">02 · 描述（你的觀察）</div>
-            <textarea
-              className="yt-textarea"
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              placeholder="點解覺得呢條片值得收藏？有咩特別嘅切入角度或爆款原因..."
-            />
-          </div>
-          <div>
-            <div className="yt-label">03 · 國家 / 地區</div>
-            <select className="yt-select" value={region} onChange={(event) => setRegion(event.target.value)}>
-              <option value="">選擇地區...</option>
-              {REGIONS.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
-          </div>
-          <button className="yt-primary" onClick={handleSubmit} disabled={saving || !videoUrl.trim()} type="button">
-            {saving ? '分析中...' : '分析並儲存'}
-          </button>
-          {status && <div className={`yt-status ${status.type}`}>{status.msg}</div>}
-        </aside>
-
         <main className="yt-main">
           <header className="yt-header">
             <div>
-              <div className="yt-kicker">SOON Internal</div>
-              <h1 className="yt-title">YouTube Idea Collection</h1>
-              <div className="yt-subtitle">按 Views ÷ Subscribers 排列，快速捕捉可轉化成 SOON 內容嘅高爆訊號。</div>
+              <div className="yt-kicker">SOON 創意營運</div>
+              <h1 className="yt-title">YouTube 題材靈感工作台</h1>
+              <div className="yt-subtitle">目前已收藏 {videos.length} 條影片</div>
             </div>
             <div className="yt-actions">
-              <button className="yt-scan" onClick={handleScan} disabled={scanning} type="button">
+              <button
+                className="yt-action-btn"
+                onClick={() => setActiveTab('topics')}
+                style={{
+                  background: activeTab === 'topics' ? '#7c5cfc' : 'transparent',
+                  border: activeTab === 'topics' ? 'none' : '1px solid #7c5cfc',
+                  color: activeTab === 'topics' ? 'white' : '#7c5cfc',
+                }}
+                type="button"
+              >
+                話題信號
+              </button>
+              <button
+                className="yt-action-btn"
+                onClick={() => setActiveTab('videos')}
+                style={{
+                  background: activeTab === 'videos' ? '#f59e0b' : 'transparent',
+                  border: activeTab === 'videos' ? 'none' : '1px solid #f59e0b',
+                  color: activeTab === 'videos' ? 'white' : '#f59e0b',
+                }}
+                type="button"
+              >
+                影片收藏
+              </button>
+              <button
+                className="yt-action-btn"
+                onClick={() => setActiveTab('selected')}
+                style={{
+                  background: activeTab === 'selected' ? '#0ea5e9' : 'transparent',
+                  border: activeTab === 'selected' ? 'none' : '1px solid #0ea5e9',
+                  color: activeTab === 'selected' ? 'white' : '#0ea5e9',
+                }}
+                type="button"
+              >
+                已選題目
+              </button>
+              <button
+                className="yt-action-btn"
+                onClick={handleScan}
+                disabled={scanning}
+                style={{ background: '#10b981', color: 'white', border: 'none' }}
+                type="button"
+              >
                 {scanning ? '掃描中...' : '🔍 掃描新爆款'}
               </button>
-              <select className="yt-sort" value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)}>
-                <option value="outlier_ratio">排序：爆款指數</option>
-                <option value="views">排序：觀看數</option>
-                <option value="created_at">排序：最新加入</option>
-              </select>
+              <button
+                className="yt-action-btn"
+                onClick={() => setAddPanelOpen(true)}
+                style={{ background: '#7c5cfc', color: 'white', border: 'none' }}
+                type="button"
+              >
+                + 新增影片
+              </button>
             </div>
           </header>
 
-          <section className="yt-stats">
-            <div className="yt-stat-card"><div className="yt-stat-num">{videos.length}</div><div className="yt-stat-label">已收藏影片</div></div>
-            <div className="yt-stat-card"><div className="yt-stat-num">{formatNumber(totalViews)}</div><div className="yt-stat-label">總播放量</div></div>
-            <div className="yt-stat-card"><div className="yt-stat-num">{avgOutlier}x</div><div className="yt-stat-label">平均爆款指數</div></div>
-            <div className="yt-stat-card"><div className="yt-stat-num">{topOutlier}x</div><div className="yt-stat-label">最高爆款指數</div></div>
-          </section>
+          <img className="yt-hero" src="/youtube-banner.jpg" alt="YouTube 題材靈感工作台" />
+          {status && <div className={`yt-status ${status.type}`}>{status.msg}</div>}
 
-          <nav className="yt-tabs">
-            <button className={`yt-tab${activeTab === 'topics' ? ' active' : ''}`} onClick={() => setActiveTab('topics')} type="button">
-              話題信號 {newTopics > 0 ? `(${newTopics})` : ''}
-            </button>
-            <button className={`yt-tab${activeTab === 'videos' ? ' active' : ''}`} onClick={() => setActiveTab('videos')} type="button">
-              影片收藏 ({unselectedVideos.length})
-            </button>
-            <button className={`yt-tab${activeTab === 'selected' ? ' active' : ''}`} onClick={() => setActiveTab('selected')} type="button">
-              已選題目 ({selectedVideos.length})
-            </button>
-          </nav>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+            <div style={{ fontSize: 13, color: '#9090a8' }}>
+              {activeTab === 'topics' && `話題信號 ${newTopics > 0 ? `(${newTopics} 新)` : ''}`}
+              {activeTab === 'videos' && `影片收藏 (${unselectedVideos.length})`}
+              {activeTab === 'selected' && `已選題目 (${selectedVideos.length})`}
+            </div>
+            <select className="yt-sort" value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)}>
+              <option value="outlier_ratio">排序：爆款指數</option>
+              <option value="views">排序：觀看數</option>
+              <option value="created_at">排序：最新加入</option>
+            </select>
+          </div>
 
           {activeTab === 'topics' && (
             <section className="yt-topic-grid">
@@ -514,6 +542,65 @@ export default function HomePage() {
           {activeTab === 'selected' && <VideoList list={selectedVideos} />}
         </main>
       </div>
+      {addPanelOpen && (
+        <div onClick={() => setAddPanelOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 49 }} />
+      )}
+      {addPanelOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          width: 400,
+          maxWidth: '100vw',
+          height: '100vh',
+          background: '#111118',
+          borderLeft: '1px solid #2a2a3a',
+          zIndex: 50,
+          padding: 24,
+          overflowY: 'auto',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <span style={{ fontSize: 16, fontWeight: 600, color: '#f0f0f5' }}>新增影片</span>
+            <button
+              onClick={() => setAddPanelOpen(false)}
+              style={{ background: 'transparent', border: 'none', color: '#9090a8', fontSize: 20, cursor: 'pointer' }}
+              type="button"
+            >
+              ×
+            </button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div>
+              <div className="yt-label">01 · YouTube URL</div>
+              <input
+                className="yt-input"
+                value={videoUrl}
+                onChange={(event) => setVideoUrl(event.target.value)}
+                placeholder="https://www.youtube.com/watch?v=..."
+              />
+            </div>
+            <div>
+              <div className="yt-label">02 · 描述（你的觀察）</div>
+              <textarea
+                className="yt-textarea"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="點解覺得呢條片值得收藏？有咩特別嘅切入角度或爆款原因..."
+              />
+            </div>
+            <div>
+              <div className="yt-label">03 · 國家 / 地區</div>
+              <select className="yt-select" value={region} onChange={(event) => setRegion(event.target.value)}>
+                <option value="">選擇地區...</option>
+                {REGIONS.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </div>
+            <button className="yt-primary" onClick={handleSubmit} disabled={saving || !videoUrl.trim()} type="button">
+              {saving ? '分析中...' : '分析並儲存'}
+            </button>
+          </div>
+        </div>
+      )}
     </>
   )
 }
