@@ -1,7 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
 
-const NL = '\n'
-
 export type YoutubeIdeaInputMode = 'keyword' | 'channel_url' | 'video_url'
 
 export type YoutubeIdeaCard = {
@@ -32,10 +30,29 @@ type AlgrowVideo = {
 }
 
 function buildMockAlgrowRows(payload: YoutubeIdeaSearchPayload): AlgrowVideo[] {
+  const topic = payload.query.trim() || 'YouTube topic'
   return [
-    { title: payload.query + ' | Viral Case A', channel: 'Sample Channel A', url: 'https://www.youtube.com/watch?v=sampleA', views: 182000, publishedAt: '2026-03-18' },
-    { title: payload.query + ' | Analysis Angle B', channel: 'Sample Channel B', url: 'https://www.youtube.com/watch?v=sampleB', views: 93000, publishedAt: '2026-03-21' },
-    { title: payload.query + ' | Series Content C', channel: 'Sample Channel C', url: 'https://www.youtube.com/watch?v=sampleC', views: 255000, publishedAt: '2026-03-27' },
+    {
+      title: `${topic}｜爆款案例 A`,
+      channel: 'Sample Channel A',
+      url: 'https://www.youtube.com/watch?v=sampleA',
+      views: 182000,
+      publishedAt: '2026-03-18',
+    },
+    {
+      title: `${topic}｜觀點拆解 B`,
+      channel: 'Sample Channel B',
+      url: 'https://www.youtube.com/watch?v=sampleB',
+      views: 93000,
+      publishedAt: '2026-03-21',
+    },
+    {
+      title: `${topic}｜系列內容 C`,
+      channel: 'Sample Channel C',
+      url: 'https://www.youtube.com/watch?v=sampleC',
+      views: 255000,
+      publishedAt: '2026-03-27',
+    },
   ]
 }
 
@@ -43,17 +60,20 @@ async function fetchAlgrowRows(payload: YoutubeIdeaSearchPayload) {
   const apiKey = process.env.ALGROW_API_KEY
   const baseUrl = process.env.ALGROW_API_BASE_URL
   if (!apiKey || !baseUrl) return buildMockAlgrowRows(payload)
+
   try {
-    const response = await fetch(baseUrl + '/youtube/search', {
+    const response = await fetch(`${baseUrl}/youtube/search`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiKey },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify(payload),
       cache: 'no-store',
     })
+
     if (!response.ok) return buildMockAlgrowRows(payload)
     const result = await response.json()
     const rows = Array.isArray(result?.videos) ? result.videos : []
     if (!rows.length) return buildMockAlgrowRows(payload)
+
     return rows.map((item: Record<string, unknown>) => ({
       title: String(item.title ?? ''),
       channel: String(item.channel ?? item.channelTitle ?? ''),
@@ -70,62 +90,63 @@ function buildDeterministicIdeas(
   payload: YoutubeIdeaSearchPayload,
   rows: AlgrowVideo[]
 ): YoutubeIdeaCard[] {
-  const topic = payload.query.trim() || '亞洲題材'
+  const topic = payload.query.trim() || 'YouTube 題材'
   const refUrls = rows.map((row) => row.url).filter(Boolean)
+
   return [
     {
-      title: topic + '｜內部視角切入',
+      title: `${topic}：為何突然爆紅？`,
       category: 'culture',
-      coreAngle: '唔好由外部視角解釋 ' + topic + '，而係拆解點解亞洲內部人士對呢件事有完全唔同嘅理解。',
-      whyNow: '真正站喺亞洲內部視角講故事嘅繁體中文內容仍然稀缺，呢種切入會更有辨識度。',
-      audienceFit: '適合對亞洲社會、文化與現實脈絡有興趣，想聽到更深入觀點嘅觀眾。',
-      breakoutPattern: '先拋出一個會令人誤解嘅表面印象，再逐層拆解背後真正原因。',
-      backingInfoNeeded: ['外界對 ' + topic + ' 最常見嘅誤解', '背後真正推動件事嘅文化或經濟原因', '一個可以令觀眾即刻代入嘅具體例子'],
-      seriesExtensions: ['延伸成三集系列', '剪成 Shorts 版本', '觀眾問答 follow-up'],
+      coreAngle: `用「現象拆解」角度講 ${topic}，由觀眾熟悉嘅表面現象切入，再拆背後文化、身份或生活方式。`,
+      whyNow: '觀眾愈來愈想知道一件事點解會紅，而唔只係睇結果。拆解型影片有高收藏同分享潛力。',
+      audienceFit: '適合鍾意文化觀察、消費趨勢、社交話題嘅觀眾。',
+      breakoutPattern: '先丟出反常識觀察，再用 3 個證據逐步拆解，最後畀一個可延伸嘅結論。',
+      backingInfoNeeded: ['近期高觀看影片例子', '相關留言區常見問題', '市場/地區背景資料'],
+      seriesExtensions: ['同類題材排行榜', '不同地區對比', '觀眾投稿 follow-up'],
       references: refUrls.slice(0, 3),
     },
     {
-      title: topic + '｜富裕與基層對照',
-      category: 'rich',
-      coreAngle: '同一個 ' + topic + '，喺亞洲富裕階層同基層視角入面，其實會呈現完全唔同嘅現實。',
-      whyNow: '亞洲階級差異愈來愈明顯，但真正講得有層次嘅中文內容仍然唔多。',
-      audienceFit: '適合對財富落差、階級流動、社會對比有興趣嘅觀眾。',
-      breakoutPattern: '先展示最誇張嘅對比，再指出背後成個制度點樣形成呢個落差。',
-      backingInfoNeeded: ['一個富裕側嘅具體例子', '同一件事喺基層視角下嘅對照版本', '能顯示落差規模嘅數據或事實'],
-      seriesExtensions: ['亞洲富裕觀察系列', '亞洲基層現實系列', '左右對照格式延伸'],
-      references: refUrls.slice(0, 3),
-    },
-    {
-      title: topic + '｜點解世界一直誤解',
+      title: `${topic}：普通人真係用得着？`,
       category: 'evergreen',
-      coreAngle: '外部媒體對 ' + topic + ' 嘅理解往往偏差好大，真正發生緊嘅事其實唔係表面咁樣。',
-      whyNow: '反主流敘事類內容好容易吸引想知道真相、唔滿足於表面新聞框架嘅觀眾。',
-      audienceFit: '適合平時會睇國際新聞，但想知道更完整背景同脈絡嘅觀眾。',
-      breakoutPattern: '先講主流說法，再逐點拆解點解呢個說法唔完整甚至錯誤。',
-      backingInfoNeeded: ['外界最常見嘅錯誤理解', '真正影響局勢嘅內部因素', '能改變觀眾閱讀方式嘅歷史或文化背景'],
-      seriesExtensions: ['誤解亞洲系列', '網絡迷思拆解系列', '專家訪談版延伸'],
+      coreAngle: `將 ${topic} 由「熱門」轉成「普通人是否需要」嘅實用角度，降低門檻，拉近觀眾距離。`,
+      whyNow: '實用驗證型內容容易留住觀眾，亦適合延伸成系列。',
+      audienceFit: '適合想慳時間、想做決定、想知道值唔值得跟風嘅觀眾。',
+      breakoutPattern: '開場提出疑問，正文用真實情境測試，結尾用一句 verdict 收束。',
+      backingInfoNeeded: ['價格或成本', '使用場景', '同類替代品'],
+      seriesExtensions: ['值唔值得系列', '新手入門系列', '反向測試系列'],
       references: refUrls.slice(0, 3),
     },
     {
-      title: topic + '｜東南亞隱藏版本',
-      category: 'poor',
-      coreAngle: '大家成日講中國、日本、韓國，但 ' + topic + ' 喺東南亞其實有另一個完全唔同版本。',
-      whyNow: '東南亞需求一直存在，但真正被看見、被系統整理成內容方向嘅題材仍然偏少。',
-      audienceFit: '適合對冷門亞洲故事、地區差異、真實生活樣貌有興趣嘅觀眾。',
-      breakoutPattern: '先借用觀眾熟悉嘅東亞參照，再急轉去東南亞版本，拉出反差。',
-      backingInfoNeeded: ['故事發生喺東南亞邊個城市或國家', '同東亞版本最大分別係乜', '一個可以令觀眾感受到現場感嘅細節'],
-      seriesExtensions: ['東南亞專題系列', '逐國拆解版本', '實地拍攝視角延伸'],
+      title: `${topic}：有錢人和平民玩法有咩不同？`,
+      category: 'rich',
+      coreAngle: `用階層反差呈現 ${topic}，比較高端做法和平民做法，製造討論同代入感。`,
+      whyNow: '反差型內容容易引發留言，尤其適合消費、旅遊、生活方式、科技題材。',
+      audienceFit: '適合愛睇比較、價值判斷、生活方式差異嘅觀眾。',
+      breakoutPattern: '兩個世界並排比較，視覺上做對照，最後落一個不偏頗但有態度嘅觀點。',
+      backingInfoNeeded: ['高端案例', '平價案例', '真實成本/時間/效果比較'],
+      seriesExtensions: ['平替清單', '高配低配對比', '地區玩法對比'],
       references: refUrls.slice(0, 3),
     },
     {
-      title: topic + '｜最近一變，成件事唔同晒',
+      title: `${topic}：最多人誤解嘅一件事`,
       category: 'breaking',
-      coreAngle: '最近有一個同 ' + topic + ' 有關嘅新變化，正重新改寫亞洲嘅運作方式，但多數人仲未留意。',
-      whyNow: '趁趨勢未飽和之前先切入，最容易食到話題紅利同演算法動能。',
-      audienceFit: '適合平時追新聞、又想早一步睇懂趨勢變化嘅觀眾。',
-      breakoutPattern: '一開始就講最近變咗乜，再解釋點解件事比表面睇落重要得多。',
-      backingInfoNeeded: ['最近實際發生咗邊個變化', '點解唔只係新聞 headline 咁簡單', '下一步可能出現嘅影響同後續'],
-      seriesExtensions: ['後續更新影片', '趨勢預測影片', '分國家影響拆解'],
+      coreAngle: `由「大家以為」切入，拆解 ${topic} 入面最容易被誤讀或過度簡化嘅部分。`,
+      whyNow: '糾正誤解類影片有天然 hook，容易令觀眾停低睇答案。',
+      audienceFit: '適合已聽過呢個題材，但未真正理解背景嘅觀眾。',
+      breakoutPattern: '開場講錯誤印象，中段拆原因，結尾提供更準確觀點。',
+      backingInfoNeeded: ['常見錯誤說法', '可驗證資料來源', '對立案例'],
+      seriesExtensions: ['誤解系列', '留言問題解答', '新手避坑'],
+      references: refUrls.slice(0, 3),
+    },
+    {
+      title: `${topic}：如果只用 100 蚊可以點玩？`,
+      category: 'poor',
+      coreAngle: `用低成本挑戰包裝 ${topic}，令題材更有任務感、節奏感同觀眾參與感。`,
+      whyNow: '挑戰型內容易理解、易追看，亦方便拍成多集。',
+      audienceFit: '適合學生、年輕觀眾、想慳錢但又想試新嘢嘅人。',
+      breakoutPattern: '設定限制，逐步做選擇，最後公開成果同真實評價。',
+      backingInfoNeeded: ['實際預算', '可行地點/工具/選項', '挑戰規則'],
+      seriesExtensions: ['100 蚊系列', '一日挑戰', '平民玩法地圖'],
       references: refUrls.slice(0, 3),
     },
   ]
@@ -137,39 +158,38 @@ async function buildClaudeIdeas(
 ) {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) return buildDeterministicIdeas(payload, rows)
+
   const anthropic = new Anthropic({ apiKey })
   const refLines = rows
-    .map((row, i) => (i + 1) + '. ' + row.title + ' | ' + row.channel + ' | ' + (row.views ?? 0) + ' views | ' + row.url)
-    .join(NL)
-  const prompt = [
-    'You are the AI assistant for SOON YouTube Idea Reader.',
-    '',
-    '你要為 SOON 生成 YouTube 題材卡。',
-    '所有輸出必須使用全繁體中文。',
-    '語氣可以自然，但不可以輸出英文標題、英文句子或簡體中文。',
-    '',
-    'SOON 定位：由香港出發，解釋亞洲社會、文化、階級與現實脈絡。',
-    '- 不是旅遊頻道，而是文化與社會分析',
-    '- 影片形式偏深度分析，要有清晰框架',
-    '- 題材角度要有內部視角，不要只停留在表面描述',
-    '',
-    '請輸出 5 張題材卡。',
-    '每張卡需要包含：title, category, coreAngle, whyNow, audienceFit, breakoutPattern, backingInfoNeeded（3 項 array）, seriesExtensions（3 項 array）, references（URL array）',
-    'category 只能是：breaking, culture, rich, poor, evergreen',
-    '除了 category key 之外，所有 value 都必須用全繁體中文。',
-    '',
-    '輸入主題：' + payload.query,
-    '輸出語言：' + payload.language,
-    '市場：' + payload.market,
-    '',
-    '參考影片：',
-    refLines,
-    '',
-    '只輸出長度為 5 的 JSON array，不要輸出任何其他文字。',
-  ].join(NL)
+    .map((row, i) => `${i + 1}. ${row.title} | ${row.channel} | ${row.views ?? 0} views | ${row.url}`)
+    .join('\n')
+
+  const prompt = `你係 SOON 嘅 YouTube 題材策略師，專門為 Creator 尋找可以發展成系列嘅 YouTube 題材。
+
+輸入模式：${payload.mode}
+搜尋內容：${payload.query}
+語言：${payload.language}
+市場：${payload.market}
+
+以下係參考信號：
+${refLines}
+
+請產生 5 個 YouTube 題材方向。每個方向都要包含：
+- title：清晰、可拍成片嘅題材標題
+- category：只可用 breaking / culture / rich / poor / evergreen
+- coreAngle：核心切入角度
+- whyNow：點解而家值得做
+- audienceFit：適合咩觀眾
+- breakoutPattern：爆款敘事/剪法模式
+- backingInfoNeeded：需要補充或查證嘅資料，array
+- seriesExtensions：可延伸系列，array
+- references：參考影片 URL，array
+
+只返回 JSON array，不要 markdown，不要額外文字。`
+
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 2500,
       messages: [{ role: 'user', content: prompt }],
     })
@@ -177,6 +197,7 @@ async function buildClaudeIdeas(
     const jsonStart = text.indexOf('[')
     const jsonEnd = text.lastIndexOf(']')
     if (jsonStart === -1 || jsonEnd === -1) return buildDeterministicIdeas(payload, rows)
+
     const parsed = JSON.parse(text.slice(jsonStart, jsonEnd + 1))
     if (!Array.isArray(parsed)) return buildDeterministicIdeas(payload, rows)
     return parsed as YoutubeIdeaCard[]

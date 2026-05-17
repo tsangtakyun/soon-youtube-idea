@@ -8,10 +8,16 @@ export async function POST(request: Request) {
     const payload = (await request.json()) as YoutubeIdeaSearchPayload
 
     if (!payload.mode || !payload.query?.trim()) {
-      return NextResponse.json({ error: '請先填輸入模式同搜尋內容。' }, { status: 400 })
+      return NextResponse.json(
+        { error: '請輸入搜尋模式同關鍵字或 YouTube 連結。' },
+        { status: 400 }
+      )
     }
 
-    const result = await generateYoutubeIdeas(payload)
+    const result = await generateYoutubeIdeas({
+      ...payload,
+      query: payload.query.trim(),
+    })
 
     let savedIdeaId: string | null = null
     let saveStatus: 'saved' | 'skipped' | 'failed' = 'skipped'
@@ -49,7 +55,7 @@ export async function POST(request: Request) {
     })
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : '未能生成 YouTube 題材卡。' },
+      { error: error instanceof Error ? error.message : '未能生成 YouTube 題材。' },
       { status: 500 }
     )
   }
