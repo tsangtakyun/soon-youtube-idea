@@ -70,6 +70,30 @@ const KEYWORD_CATEGORIES = [
   'Lifestyle',
 ]
 
+const GUIDE_QUESTIONS = [
+  {
+    key: 'topic',
+    question: '你嘅頻道主要係做咩題材？',
+    placeholder: '例：美食探店、旅遊 vlog、文化評論、生活分享...',
+    options: ['美食探店', '旅遊探索', '文化評論', '生活 vlog', '社會現象', '科技資訊', '財經理財', '娛樂搞笑'],
+  },
+  {
+    key: 'market',
+    question: '你主要做邊個市場？',
+    placeholder: '例：香港、台灣、東南亞、全亞洲...',
+    options: ['香港', '台灣', '東南亞', '日本/韓國', '全亞洲', '海外華人'],
+  },
+  {
+    key: 'audience',
+    question: '你嘅目標觀眾係咩人？',
+    placeholder: '例：本地港人、海外港人、年輕人、家庭...',
+    options: ['本地港人', '海外港人', '亞洲年輕人', '家庭觀眾', '商務人士', '旅遊愛好者'],
+  },
+] as const
+
+type GuideKey = typeof GUIDE_QUESTIONS[number]['key']
+type GuideAnswers = Record<GuideKey, string>
+
 const CSS = `
 * { box-sizing: border-box; }
 body { background: #0a0a0f; color: #f0f0f5; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
@@ -176,6 +200,12 @@ export default function HomePage() {
   const [scanning, setScanning] = useState(false)
   const [addPanelOpen, setAddPanelOpen] = useState(false)
   const [keywordPanelOpen, setKeywordPanelOpen] = useState(false)
+  const [aiGuideOpen, setAiGuideOpen] = useState(false)
+  const [guideStep, setGuideStep] = useState(0)
+  const [guideAnswers, setGuideAnswers] = useState<GuideAnswers>({ topic: '', market: '', audience: '' })
+  const [suggestedKeywords, setSuggestedKeywords] = useState<Array<{ keyword: string; category: string; reason: string }>>([])
+  const [suggestLoading, setSuggestLoading] = useState(false)
+  const [selectedSuggestions, setSelectedSuggestions] = useState<Set<number>>(new Set())
   const [, setUserId] = useState('')
   const [status, setStatus] = useState<{ type: 'loading' | 'success' | 'error'; msg: string } | null>(null)
   const [outliningId, setOutliningId] = useState('')
@@ -334,6 +364,53 @@ export default function HomePage() {
     }
   }
 
+  async function handleSuggestKeywords() {
+    if (guideStep < 2) {
+      setGuideStep((step) => step + 1)
+      return
+    }
+
+    setSuggestLoading(true)
+    try {
+      const res = await fetch('/api/suggest-keywords', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers: guideAnswers }),
+      })
+      const data = await res.json()
+      const suggestions = Array.isArray(data.keywords) ? data.keywords : []
+      setSuggestedKeywords(suggestions)
+      setSelectedSuggestions(new Set(suggestions.map((_: unknown, index: number) => index)))
+      setGuideStep(3)
+    } catch {
+      setSuggestedKeywords([])
+    } finally {
+      setSuggestLoading(false)
+    }
+  }
+
+  async function handleAddSelectedSuggestions() {
+    const toAdd = suggestedKeywords.filter((_, index) => selectedSuggestions.has(index))
+    for (const keyword of toAdd) {
+      await fetch('/api/scan-keywords', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          keyword: keyword.keyword,
+          category: keyword.category,
+          active: true,
+        }),
+      })
+    }
+
+    await fetchKeywords()
+    setAiGuideOpen(false)
+    setGuideStep(0)
+    setGuideAnswers({ topic: '', market: '', audience: '' })
+    setSuggestedKeywords([])
+    setSelectedSuggestions(new Set())
+  }
+
   const sortedVideos = useMemo(() => {
     return [...videos].sort((a, b) => {
       if (sortBy === 'views') return b.views - a.views
@@ -345,6 +422,8 @@ export default function HomePage() {
   const unselectedVideos = sortedVideos.filter((video) => !video.selected)
   const selectedVideos = sortedVideos.filter((video) => video.selected)
   const newTopics = topics.filter((topic) => topic.status === 'new').length
+  const currentGuideQuestion = GUIDE_QUESTIONS[Math.min(guideStep, 2)]
+  const currentGuideValue = guideAnswers[currentGuideQuestion.key]
 
   function VideoList({ list }: { list: ViralVideo[] }) {
     return (
@@ -644,6 +723,197 @@ export default function HomePage() {
               ×
             </button>
           </div>
+
+          <button
+            onClick={() => setAiGuideOpen((open) => !open)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: 'linear-gradient(135deg, #7c5cfc, #f59e0b)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              marginBottom: '16px',
+            }}
+            type="button"
+          >
+            ✨ AI 幫我設定關鍵字
+          </button>
+
+          {aiGuideOpen && guideStep < 3 && (
+            <div style={{ background: '#16161f', border: '1px solid #2a2a3a', borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '16px' }}>
+                {[0, 1, 2].map((index) => (
+                  <div
+                    key={index}
+                    style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      background: index <= guideStep ? '#7c5cfc' : '#2a2a3a',
+                    }}
+                  />
+                ))}
+              </div>
+
+              <p style={{ fontSize: '15px', fontWeight: 600, color: '#f0f0f5', margin: '0 0 12px' }}>
+                {currentGuideQuestion.question}
+              </p>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                {currentGuideQuestion.options.map((option) => (
+                  <button
+                    key={option}
+                    onClick={() => setGuideAnswers((prev) => ({ ...prev, [currentGuideQuestion.key]: option }))}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '999px',
+                      border: currentGuideValue === option ? '1px solid #7c5cfc' : '1px solid #2a2a3a',
+                      background: currentGuideValue === option ? 'rgba(124,92,252,0.2)' : 'transparent',
+                      color: '#f0f0f5',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                    }}
+                    type="button"
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+
+              <input
+                placeholder={currentGuideQuestion.placeholder}
+                value={currentGuideValue}
+                onChange={(event) => setGuideAnswers((prev) => ({ ...prev, [currentGuideQuestion.key]: event.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  background: '#111118',
+                  border: '1px solid #2a2a3a',
+                  borderRadius: '8px',
+                  color: '#f0f0f5',
+                  fontSize: '13px',
+                }}
+              />
+
+              <button
+                onClick={handleSuggestKeywords}
+                disabled={!currentGuideValue || suggestLoading}
+                style={{
+                  width: '100%',
+                  marginTop: '12px',
+                  padding: '10px',
+                  background: '#7c5cfc',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  cursor: !currentGuideValue || suggestLoading ? 'not-allowed' : 'pointer',
+                  opacity: !currentGuideValue || suggestLoading ? 0.5 : 1,
+                }}
+                type="button"
+              >
+                {suggestLoading ? 'AI 分析中...' : guideStep < 2 ? '下一步 →' : '✨ 生成關鍵字建議'}
+              </button>
+            </div>
+          )}
+
+          {aiGuideOpen && guideStep === 3 && suggestedKeywords.length > 0 && (
+            <div style={{ marginBottom: '20px' }}>
+              <p style={{ fontSize: '13px', color: '#9090a8', margin: '0 0 12px' }}>
+                根據你嘅頻道特性，AI 建議以下關鍵字：
+              </p>
+
+              {suggestedKeywords.map((keyword, index) => (
+                <div
+                  key={`${keyword.keyword}-${index}`}
+                  onClick={() => {
+                    const next = new Set(selectedSuggestions)
+                    if (next.has(index)) next.delete(index)
+                    else next.add(index)
+                    setSelectedSuggestions(next)
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '10px',
+                    padding: '12px',
+                    marginBottom: '8px',
+                    background: selectedSuggestions.has(index) ? 'rgba(124,92,252,0.1)' : '#16161f',
+                    border: `1px solid ${selectedSuggestions.has(index) ? '#7c5cfc' : '#2a2a3a'}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div style={{
+                    width: '18px',
+                    height: '18px',
+                    borderRadius: '4px',
+                    flexShrink: 0,
+                    marginTop: '2px',
+                    background: selectedSuggestions.has(index) ? '#7c5cfc' : 'transparent',
+                    border: `1px solid ${selectedSuggestions.has(index) ? '#7c5cfc' : '#3a3a50'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    {selectedSuggestions.has(index) && <span style={{ color: 'white', fontSize: '12px' }}>✓</span>}
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '13px', fontWeight: 500, color: '#f0f0f5', margin: 0 }}>{keyword.keyword}</p>
+                    <p style={{ fontSize: '11px', color: '#9090a8', margin: '2px 0 0' }}>
+                      {keyword.category} · {keyword.reason}
+                    </p>
+                  </div>
+                </div>
+              ))}
+
+              <button
+                onClick={handleAddSelectedSuggestions}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  marginTop: '8px',
+                }}
+                type="button"
+              >
+                ✅ 加入已選 {selectedSuggestions.size} 個關鍵字
+              </button>
+
+              <button
+                onClick={() => {
+                  setGuideStep(0)
+                  setSuggestedKeywords([])
+                  setSelectedSuggestions(new Set())
+                }}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  marginTop: '8px',
+                  background: 'transparent',
+                  color: '#9090a8',
+                  border: '1px solid #2a2a3a',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                }}
+                type="button"
+              >
+                重新設定
+              </button>
+            </div>
+          )}
 
           <div style={{ marginBottom: 20 }}>
             <div className="yt-label">新增掃描關鍵字</div>
