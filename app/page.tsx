@@ -33,20 +33,23 @@ type TopicSignal = {
   signal_count: number
   max_outlier_ratio: number
   avg_outlier_ratio: number
-  related_channels: string[]
+  related_channels: string[] | null
   ai_analysis: string | null
   soon_angle: string | null
-  status: string
+  status: string | null
+}
+
+type ScanKeyword = {
+  id: string
+  keyword: string
+  category: string | null
+  active: boolean
 }
 
 const REGIONS = [
-  '香港',
-  '日本',
-  '韓國',
-  '台灣',
-  '東南亞',
-  '中國',
-  '歐美',
+  'Hong Kong',
+  'East Asia',
+  'Southeast Asia',
   'Rich Asia',
   'Poor Asia',
   'Culture',
@@ -55,45 +58,38 @@ const REGIONS = [
   'Lifestyle',
 ]
 
+const KEYWORD_CATEGORIES = [
+  'Hong Kong',
+  'East Asia',
+  'Southeast Asia',
+  'Food',
+  'Travel',
+  'Culture',
+  'Rich Asia',
+  'Poor Asia',
+  'Lifestyle',
+]
+
 const CSS = `
 * { box-sizing: border-box; }
 body { background: #0a0a0f; color: #f0f0f5; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 .yt-shell { min-height: 100vh; background: #0a0a0f; width: 100%; }
-.yt-sidebar { background: #16161f; border-right: 1px solid #2a2a3a; padding: 28px 20px; display: flex; flex-direction: column; gap: 20px; }
-.yt-kicker { font-size: 12px; letter-spacing: .18em; color: #5a5a72; text-transform: uppercase; }
-.yt-side-title { font-size: 24px; font-weight: 700; color: #fff; line-height: 1.2; margin-top: 6px; }
-.yt-divider { height: 1px; background: #2a2a3a; }
-.yt-label { font-size: 12px; color: #a7a7c4; margin-bottom: 8px; }
-.yt-input, .yt-textarea, .yt-select { width: 100%; background: #111118; color: #f0f0f5; border: 1px solid #2a2a3a; border-radius: 10px; padding: 11px 12px; font-size: 14px; outline: none; }
-.yt-textarea { min-height: 82px; resize: vertical; line-height: 1.5; }
-.yt-input:focus, .yt-textarea:focus, .yt-select:focus { border-color: #7c5cfc; }
-.yt-select option { background: #111118; color: #f0f0f5; }
-.yt-primary { width: 100%; background: #7c5cfc; color: #fff; border: none; border-radius: 10px; padding: 12px 14px; font-size: 14px; font-weight: 600; cursor: pointer; }
-.yt-primary:disabled { opacity: .45; cursor: not-allowed; }
-.yt-status { border-radius: 10px; padding: 12px; font-size: 13px; line-height: 1.5; }
-.yt-status.loading { background: rgba(124,92,252,.12); color: #c4b5fd; }
-.yt-status.success { background: rgba(16,185,129,.12); color: #34d399; }
-.yt-status.error { background: rgba(239,68,68,.12); color: #fca5a5; }
 .yt-main { width: 100%; padding: 32px 32px 64px; display: flex; flex-direction: column; gap: 20px; }
 .yt-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+.yt-kicker { font-size: 12px; letter-spacing: .18em; color: #5a5a72; text-transform: uppercase; }
 .yt-title { font-size: 28px; line-height: 1.15; margin: 0; color: #f0f0f5; font-weight: 700; }
 .yt-subtitle { margin-top: 6px; font-size: 13px; color: #9090a8; }
 .yt-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 .yt-action-btn { border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; white-space: nowrap; }
 .yt-action-btn:disabled { opacity: .55; cursor: not-allowed; }
 .yt-hero { width: 100%; height: 160px; object-fit: cover; object-position: center; border-radius: 12px; display: block; margin-bottom: 20px; }
-.yt-scan { background: transparent; color: #0ea5e9; border: 1px solid #0ea5e9; border-radius: 10px; padding: 9px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
-.yt-scan:disabled { opacity: .45; cursor: not-allowed; }
+.yt-status { border-radius: 10px; padding: 12px; font-size: 13px; line-height: 1.5; }
+.yt-status.loading { background: rgba(124,92,252,.12); color: #c4b5fd; }
+.yt-status.success { background: rgba(16,185,129,.12); color: #34d399; }
+.yt-status.error { background: rgba(239,68,68,.12); color: #fca5a5; }
 .yt-sort { background: #111118; color: #f0f0f5; border: 1px solid #2a2a3a; border-radius: 10px; padding: 9px 12px; font-size: 13px; }
-.yt-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.yt-stat-card { background: #16161f; border: 1px solid #2a2a3a; border-radius: 14px; padding: 18px 20px; }
-.yt-stat-num { font-size: 32px; font-weight: 700; color: #fff; }
-.yt-stat-label { margin-top: 6px; font-size: 12px; color: #a7a7c4; }
-.yt-tabs { display: none; }
-.yt-tab { background: transparent; color: #a7a7c4; border: 1px solid #2a2a3a; border-radius: 10px; padding: 8px 18px; font-size: 14px; cursor: pointer; }
-.yt-tab.active { background: #7c5cfc; color: #fff; border-color: #7c5cfc; }
 .yt-card { background: #16161f; border: 1px solid #2a2a3a; border-radius: 14px; overflow: hidden; }
-.yt-table-head, .yt-video-row { display: grid; grid-template-columns: minmax(0, 2fr) 100px 100px 100px 120px 110px 90px 160px; gap: 10px; align-items: center; }
+.yt-table-head, .yt-video-row { display: grid; grid-template-columns: minmax(0, 2fr) 100px 100px 100px 120px 110px 90px 180px; gap: 10px; align-items: center; }
 .yt-table-head { padding: 13px 18px; color: #5a5a72; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; border-bottom: 1px solid #2a2a3a; }
 .yt-video-row { padding: 16px 18px; border-bottom: 1px solid rgba(255,255,255,.06); cursor: pointer; }
 .yt-video-row:hover { background: rgba(255,255,255,.025); }
@@ -125,26 +121,29 @@ body { background: #0a0a0f; color: #f0f0f5; font-family: Inter, -apple-system, B
 .yt-topic-num { font-size: 28px; font-weight: 700; color: #fff; }
 .yt-topic-label { color: #5a5a72; font-size: 11px; margin-top: 4px; }
 .yt-empty { color: #9090a8; text-align: center; padding: 72px 20px; line-height: 1.8; }
+.yt-label { font-size: 12px; color: #a7a7c4; margin-bottom: 8px; }
+.yt-input, .yt-textarea, .yt-select { width: 100%; background: #111118; color: #f0f0f5; border: 1px solid #2a2a3a; border-radius: 10px; padding: 11px 12px; font-size: 14px; outline: none; }
+.yt-textarea { min-height: 82px; resize: vertical; line-height: 1.5; }
+.yt-input:focus, .yt-textarea:focus, .yt-select:focus { border-color: #7c5cfc; }
+.yt-select option { background: #111118; color: #f0f0f5; }
+.yt-primary { width: 100%; background: #7c5cfc; color: #fff; border: none; border-radius: 10px; padding: 12px 14px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.yt-primary:disabled { opacity: .45; cursor: not-allowed; }
+.yt-panel-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 49; }
+.yt-panel { position: fixed; top: 0; right: 0; width: 400px; max-width: 100vw; height: 100vh; background: #111118; border-left: 1px solid #2a2a3a; z-index: 50; padding: 24px; overflow-y: auto; }
+.yt-keyword-row { display: grid; grid-template-columns: minmax(0, 1fr) 92px 54px; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+.yt-switch { width: 42px; height: 24px; border-radius: 999px; border: 1px solid #2a2a3a; background: #16161f; padding: 2px; cursor: pointer; }
+.yt-switch span { display: block; width: 18px; height: 18px; border-radius: 999px; background: #5a5a72; transition: transform .16s ease, background .16s ease; }
+.yt-switch.active { background: rgba(124,92,252,.24); border-color: #7c5cfc; }
+.yt-switch.active span { transform: translateX(16px); background: #7c5cfc; }
 @media (max-width: 1200px) {
   .yt-main { padding: 24px; }
   .yt-header { flex-direction: column; }
   .yt-actions { justify-content: flex-start; }
   .yt-table-head { display: none; }
   .yt-video-row { grid-template-columns: 1fr; }
+  .yt-topic-main { grid-template-columns: 1fr; }
 }
 `
-
-function repairText(value: unknown) {
-  if (typeof value !== 'string') return ''
-  if (!/[ÃÂæäåçèéïð]/.test(value)) return value
-  try {
-    const bytes = Array.from(value, (char) => char.charCodeAt(0) & 0xff)
-    const decoded = new TextDecoder('utf-8').decode(new Uint8Array(bytes))
-    return decoded.includes('�') ? value : decoded
-  } catch {
-    return value
-  }
-}
 
 function formatNumber(value: number) {
   if (!Number.isFinite(value)) return '0'
@@ -154,8 +153,8 @@ function formatNumber(value: number) {
 }
 
 function outlierStyle(ratio: number) {
-  if (ratio >= 5) return { label: '高爆', color: '#ef4444' }
-  if (ratio >= 2) return { label: '潛力', color: '#f59e0b' }
+  if (ratio >= 5) return { label: '超高', color: '#ef4444' }
+  if (ratio >= 2) return { label: '高', color: '#f59e0b' }
   if (ratio >= 0.5) return { label: '正常', color: '#22c55e' }
   return { label: '低', color: '#6b7280' }
 }
@@ -166,13 +165,17 @@ export default function HomePage() {
   const [region, setRegion] = useState('')
   const [videos, setVideos] = useState<ViralVideo[]>([])
   const [topics, setTopics] = useState<TopicSignal[]>([])
-  const [activeTab, setActiveTab] = useState<'topics' | 'videos' | 'selected'>('topics')
+  const [keywords, setKeywords] = useState<ScanKeyword[]>([])
+  const [keywordInput, setKeywordInput] = useState('')
+  const [keywordCategory, setKeywordCategory] = useState('Culture')
+  const [activeTab, setActiveTab] = useState<'signals' | 'collection' | 'selected'>('signals')
   const [sortBy, setSortBy] = useState<'outlier_ratio' | 'views' | 'created_at'>('outlier_ratio')
   const [expandedId, setExpandedId] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [scanning, setScanning] = useState(false)
   const [addPanelOpen, setAddPanelOpen] = useState(false)
+  const [keywordPanelOpen, setKeywordPanelOpen] = useState(false)
   const [, setUserId] = useState('')
   const [status, setStatus] = useState<{ type: 'loading' | 'success' | 'error'; msg: string } | null>(null)
   const [outliningId, setOutliningId] = useState('')
@@ -208,16 +211,22 @@ export default function HomePage() {
     }
   }
 
+  async function fetchKeywords() {
+    const res = await fetch('/api/scan-keywords', { cache: 'no-store' })
+    const data = await res.json()
+    setKeywords(data.keywords ?? [])
+  }
+
   async function handleScan() {
     setScanning(true)
-    setStatus({ type: 'loading', msg: '正在掃描 YouTube 爆款資料...' })
+    setStatus({ type: 'loading', msg: '正在掃描 YouTube 最新爆款影片...' })
     try {
       const res = await fetch('/api/scan', { method: 'POST' })
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.error || '掃描失敗')
       setStatus({
         type: 'success',
-        msg: `掃描完成：新增 ${data.results?.videos_saved ?? 0} 條影片，${data.results?.topics_saved ?? 0} 個話題信號`,
+        msg: `掃描完成：新增 ${data.results?.videos_saved ?? 0} 條影片，整理 ${data.results?.topics_saved ?? 0} 個話題信號。`,
       })
       await fetchAll()
     } catch (error) {
@@ -239,7 +248,7 @@ export default function HomePage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '儲存失敗')
-      setStatus({ type: 'success', msg: `已儲存：${repairText(data.title_zh || data.title_original)}` })
+      setStatus({ type: 'success', msg: `已儲存：${data.title_zh || data.title_original || '新影片'}` })
       setVideoUrl('')
       setDescription('')
       setRegion('')
@@ -269,7 +278,7 @@ export default function HomePage() {
 
   async function handleGenerateOutline(video: ViralVideo) {
     setOutliningId(video.id)
-    setStatus({ type: 'loading', msg: '正在生成劇本大綱...' })
+    setStatus({ type: 'loading', msg: '正在生成題材大綱...' })
     try {
       const res = await fetch('/api/outline', {
         method: 'POST',
@@ -278,14 +287,14 @@ export default function HomePage() {
       })
       const data = await res.json()
       if (!res.ok || !data.success || !data.outlineId) throw new Error(data.error || '生成大綱失敗')
-      let topic = repairText(video.title_zh) || repairText(video.title_original) || ''
-      let background = repairText(video.ai_analysis) || repairText(video.description) || ''
+      let topic = video.title_zh || video.title_original || ''
+      let background = video.ai_analysis || video.description || ''
       try {
         const content = typeof data.content === 'string' ? JSON.parse(data.content) : data.content
         topic = content?.pageTitle || topic
         background = content?.coreAngle || content?.caption || background
       } catch {
-        // Keep the video fallback if outline content is not JSON.
+        // Keep fallback values.
       }
       window.parent.postMessage({
         type: 'SOON_NAVIGATE_TOOL',
@@ -301,6 +310,30 @@ export default function HomePage() {
     }
   }
 
+  async function handleKeywordToggle(id: string, active: boolean) {
+    const res = await fetch(`/api/scan-keywords?id=${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ active }),
+    })
+    if (res.ok) {
+      setKeywords((current) => current.map((keyword) => (keyword.id === id ? { ...keyword, active } : keyword)))
+    }
+  }
+
+  async function handleAddKeyword() {
+    if (!keywordInput.trim()) return
+    const res = await fetch('/api/scan-keywords', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keyword: keywordInput.trim(), category: keywordCategory }),
+    })
+    if (res.ok) {
+      setKeywordInput('')
+      await fetchKeywords()
+    }
+  }
+
   const sortedVideos = useMemo(() => {
     return [...videos].sort((a, b) => {
       if (sortBy === 'views') return b.views - a.views
@@ -311,11 +344,6 @@ export default function HomePage() {
 
   const unselectedVideos = sortedVideos.filter((video) => !video.selected)
   const selectedVideos = sortedVideos.filter((video) => video.selected)
-  const totalViews = videos.reduce((sum, video) => sum + (video.views || 0), 0)
-  const avgOutlier = videos.length
-    ? (videos.reduce((sum, video) => sum + (video.outlier_ratio || 0), 0) / videos.length).toFixed(1)
-    : '0.0'
-  const topOutlier = videos.length ? Math.max(...videos.map((video) => video.outlier_ratio || 0)).toFixed(1) : '0.0'
   const newTopics = topics.filter((topic) => topic.status === 'new').length
 
   function VideoList({ list }: { list: ViralVideo[] }) {
@@ -339,16 +367,17 @@ export default function HomePage() {
           list.map((video) => {
             const expanded = expandedId === video.id
             const outlier = outlierStyle(video.outlier_ratio || 0)
-            const title = repairText(video.title_zh) || repairText(video.title_original) || '未命名影片'
-            const original = repairText(video.title_original)
+            const title = video.title_zh || video.title_original || '未命名影片'
             return (
               <div key={video.id}>
                 <div className="yt-video-row" onClick={() => setExpandedId(expanded ? '' : video.id)}>
                   <div>
                     <div className="yt-video-title">{title}</div>
-                    {original && original !== title && <div className="yt-video-original">{original}</div>}
-                    <div className="yt-meta">{repairText(video.channel_name)}</div>
-                    {video.region && <span className="yt-region">{repairText(video.region)}</span>}
+                    {video.title_original && video.title_original !== title && (
+                      <div className="yt-video-original">{video.title_original}</div>
+                    )}
+                    <div className="yt-meta">{video.channel_name}</div>
+                    {video.region && <span className="yt-region">{video.region}</span>}
                   </div>
                   <div className="yt-cell-main">{formatNumber(video.views)}</div>
                   <div className="yt-cell-main">{formatNumber(video.likes)}</div>
@@ -360,15 +389,15 @@ export default function HomePage() {
                     </span>
                     <div className="yt-cell-sub">{outlier.label}</div>
                   </div>
-                  <div className="yt-cell-main" style={{ fontSize: 13 }}>{repairText(video.region) || '-'}</div>
+                  <div className="yt-cell-main" style={{ fontSize: 13 }}>{video.region || '-'}</div>
                   <div className="yt-row-actions" onClick={(event) => event.stopPropagation()}>
                     {video.selected ? (
                       <button className="yt-small-btn yt-btn-remove" onClick={() => handleSelect(video.id, false)} type="button">
-                        取消
+                        移出
                       </button>
                     ) : (
                       <button className="yt-small-btn yt-btn-select" onClick={() => handleSelect(video.id, true)} type="button">
-                        收藏
+                        選取
                       </button>
                     )}
                     <button
@@ -377,7 +406,7 @@ export default function HomePage() {
                       disabled={outliningId === video.id}
                       type="button"
                     >
-                      {outliningId === video.id ? '生成中' : '推上劇本'}
+                      {outliningId === video.id ? '生成中...' : '推去劇本'}
                     </button>
                     <button className="yt-small-btn yt-btn-delete" onClick={() => handleDelete(video.id)} type="button">
                       刪除
@@ -388,11 +417,11 @@ export default function HomePage() {
                   <div className="yt-expand">
                     <div>
                       <div className="yt-expand-label">AI 分析</div>
-                      <div className="yt-expand-text">{repairText(video.ai_analysis) || '未有分析'}</div>
+                      <div className="yt-expand-text">{video.ai_analysis || '未有分析'}</div>
                     </div>
                     <div>
-                      <div className="yt-expand-label">描述 / 連結</div>
-                      <div className="yt-expand-text">{repairText(video.description) || '未有描述'}</div>
+                      <div className="yt-expand-label">描述 / 來源</div>
+                      <div className="yt-expand-text">{video.description || '未有描述'}</div>
                       <a href={video.video_url} target="_blank" rel="noreferrer" style={{ color: '#7c5cfc', fontSize: 13 }}>
                         打開 YouTube 影片
                       </a>
@@ -421,11 +450,11 @@ export default function HomePage() {
             <div className="yt-actions">
               <button
                 className="yt-action-btn"
-                onClick={() => setActiveTab('topics')}
+                onClick={() => setActiveTab('signals')}
                 style={{
-                  background: activeTab === 'topics' ? '#7c5cfc' : 'transparent',
-                  border: activeTab === 'topics' ? 'none' : '1px solid #7c5cfc',
-                  color: activeTab === 'topics' ? 'white' : '#7c5cfc',
+                  background: activeTab === 'signals' ? '#7c5cfc' : 'transparent',
+                  border: activeTab === 'signals' ? 'none' : '1px solid #7c5cfc',
+                  color: activeTab === 'signals' ? 'white' : '#7c5cfc',
                 }}
                 type="button"
               >
@@ -433,11 +462,11 @@ export default function HomePage() {
               </button>
               <button
                 className="yt-action-btn"
-                onClick={() => setActiveTab('videos')}
+                onClick={() => setActiveTab('collection')}
                 style={{
-                  background: activeTab === 'videos' ? '#f59e0b' : 'transparent',
-                  border: activeTab === 'videos' ? 'none' : '1px solid #f59e0b',
-                  color: activeTab === 'videos' ? 'white' : '#f59e0b',
+                  background: activeTab === 'collection' ? '#f59e0b' : 'transparent',
+                  border: activeTab === 'collection' ? 'none' : '1px solid #f59e0b',
+                  color: activeTab === 'collection' ? 'white' : '#f59e0b',
                 }}
                 type="button"
               >
@@ -462,7 +491,18 @@ export default function HomePage() {
                 style={{ background: '#10b981', color: 'white', border: 'none' }}
                 type="button"
               >
-                {scanning ? '掃描中...' : '🔍 掃描新爆款'}
+                {scanning ? '掃描中...' : '🔍 搜掘新爆款'}
+              </button>
+              <button
+                className="yt-action-btn"
+                onClick={() => {
+                  setKeywordPanelOpen(true)
+                  void fetchKeywords()
+                }}
+                style={{ background: 'transparent', border: '1px solid #2a2a3a', color: '#9090a8' }}
+                type="button"
+              >
+                ⚙️ 關鍵字設定
               </button>
               <button
                 className="yt-action-btn"
@@ -480,21 +520,23 @@ export default function HomePage() {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
             <div style={{ fontSize: 13, color: '#9090a8' }}>
-              {activeTab === 'topics' && `話題信號 ${newTopics > 0 ? `(${newTopics} 新)` : ''}`}
-              {activeTab === 'videos' && `影片收藏 (${unselectedVideos.length})`}
+              {activeTab === 'signals' && `話題信號 ${newTopics > 0 ? `(${newTopics} 新)` : ''}`}
+              {activeTab === 'collection' && `影片收藏 (${unselectedVideos.length})`}
               {activeTab === 'selected' && `已選題目 (${selectedVideos.length})`}
             </div>
             <select className="yt-sort" value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)}>
               <option value="outlier_ratio">排序：爆款指數</option>
-              <option value="views">排序：觀看數</option>
-              <option value="created_at">排序：最新加入</option>
+              <option value="views">排序：播放量</option>
+              <option value="created_at">排序：新增時間</option>
             </select>
           </div>
 
-          {activeTab === 'topics' && (
+          {activeTab === 'signals' && (
             <section className="yt-topic-grid">
               {topics.length === 0 ? (
-                <div className="yt-empty">尚未有話題信號。<br />按右上角「掃描新爆款」開始發現題材。</div>
+                <div className="yt-empty">
+                  尚未有話題信號。<br />按「搜掘新爆款」開始發現近期題材。
+                </div>
               ) : (
                 [...topics]
                   .sort((a, b) => (b.max_outlier_ratio || 0) - (a.max_outlier_ratio || 0))
@@ -504,15 +546,15 @@ export default function HomePage() {
                       <article className="yt-topic" key={topic.id} onClick={() => setExpandedId(expanded ? '' : topic.id)}>
                         <div className="yt-topic-main">
                           <div>
-                            <div className="yt-topic-title">{repairText(topic.topic_zh) || '未命名話題'}</div>
-                            {topic.topic_en && <div className="yt-topic-en">{repairText(topic.topic_en)}</div>}
-                            {topic.related_channels?.length > 0 && (
-                              <div className="yt-topic-channels">{topic.related_channels.slice(0, 5).map(repairText).join(' · ')}</div>
+                            <div className="yt-topic-title">{topic.topic_zh || '未命名話題'}</div>
+                            {topic.topic_en && <div className="yt-topic-en">{topic.topic_en}</div>}
+                            {topic.related_channels && topic.related_channels.length > 0 && (
+                              <div className="yt-topic-channels">{topic.related_channels.slice(0, 5).join(' · ')}</div>
                             )}
                           </div>
                           <div className="yt-topic-metric">
                             <div className="yt-topic-num">{topic.signal_count}</div>
-                            <div className="yt-topic-label">信號數</div>
+                            <div className="yt-topic-label">信號數量</div>
                           </div>
                           <div className="yt-topic-metric">
                             <div className="yt-topic-num">{(topic.max_outlier_ratio || 0).toFixed(1)}x</div>
@@ -523,11 +565,11 @@ export default function HomePage() {
                           <div className="yt-expand">
                             <div>
                               <div className="yt-expand-label">AI 分析</div>
-                              <div className="yt-expand-text">{repairText(topic.ai_analysis) || '未有分析'}</div>
+                              <div className="yt-expand-text">{topic.ai_analysis || '未有分析'}</div>
                             </div>
                             <div>
                               <div className="yt-expand-label">SOON 角度</div>
-                              <div className="yt-expand-text">{repairText(topic.soon_angle) || '未有建議'}</div>
+                              <div className="yt-expand-text">{topic.soon_angle || '未有建議'}</div>
                             </div>
                           </div>
                         )}
@@ -538,27 +580,14 @@ export default function HomePage() {
             </section>
           )}
 
-          {activeTab === 'videos' && <VideoList list={unselectedVideos} />}
+          {activeTab === 'collection' && <VideoList list={unselectedVideos} />}
           {activeTab === 'selected' && <VideoList list={selectedVideos} />}
         </main>
       </div>
+
+      {addPanelOpen && <div className="yt-panel-backdrop" onClick={() => setAddPanelOpen(false)} />}
       {addPanelOpen && (
-        <div onClick={() => setAddPanelOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 49 }} />
-      )}
-      {addPanelOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          right: 0,
-          width: 400,
-          maxWidth: '100vw',
-          height: '100vh',
-          background: '#111118',
-          borderLeft: '1px solid #2a2a3a',
-          zIndex: 50,
-          padding: 24,
-          overflowY: 'auto',
-        }}>
+        <div className="yt-panel">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <span style={{ fontSize: 16, fontWeight: 600, color: '#f0f0f5' }}>新增影片</span>
             <button
@@ -599,6 +628,69 @@ export default function HomePage() {
               {saving ? '分析中...' : '分析並儲存'}
             </button>
           </div>
+        </div>
+      )}
+
+      {keywordPanelOpen && <div className="yt-panel-backdrop" onClick={() => setKeywordPanelOpen(false)} />}
+      {keywordPanelOpen && (
+        <div className="yt-panel">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <span style={{ fontSize: 16, fontWeight: 600, color: '#f0f0f5' }}>關鍵字設定</span>
+            <button
+              onClick={() => setKeywordPanelOpen(false)}
+              style={{ background: 'transparent', border: 'none', color: '#9090a8', fontSize: 20, cursor: 'pointer' }}
+              type="button"
+            >
+              ×
+            </button>
+          </div>
+
+          <div style={{ marginBottom: 20 }}>
+            <div className="yt-label">新增掃描關鍵字</div>
+            <input
+              className="yt-input"
+              value={keywordInput}
+              onChange={(event) => setKeywordInput(event.target.value)}
+              placeholder="例如：香港人移居海外生活"
+              style={{ marginBottom: 8 }}
+            />
+            <select
+              className="yt-select"
+              value={keywordCategory}
+              onChange={(event) => setKeywordCategory(event.target.value)}
+              style={{ marginBottom: 8 }}
+            >
+              {KEYWORD_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+            <button className="yt-primary" type="button" onClick={handleAddKeyword} disabled={!keywordInput.trim()}>
+              + 新增關鍵字
+            </button>
+          </div>
+
+          <div className="yt-label">現有關鍵字</div>
+          {keywords.length === 0 ? (
+            <div style={{ color: '#5a5a72', fontSize: 13, padding: '20px 0' }}>未有關鍵字</div>
+          ) : (
+            keywords.map((keyword) => (
+              <div className="yt-keyword-row" key={keyword.id}>
+                <div>
+                  <div style={{ color: '#f0f0f5', fontSize: 13, lineHeight: 1.4 }}>{keyword.keyword}</div>
+                  <div style={{ color: '#5a5a72', fontSize: 11, marginTop: 3 }}>{keyword.category || 'Uncategorized'}</div>
+                </div>
+                <div style={{ color: keyword.active ? '#34d399' : '#5a5a72', fontSize: 12 }}>
+                  {keyword.active ? 'Active' : 'Inactive'}
+                </div>
+                <button
+                  type="button"
+                  className={`yt-switch ${keyword.active ? 'active' : ''}`}
+                  onClick={() => handleKeywordToggle(keyword.id, !keyword.active)}
+                  aria-label={`Toggle ${keyword.keyword}`}
+                >
+                  <span />
+                </button>
+              </div>
+            ))
+          )}
         </div>
       )}
     </>
