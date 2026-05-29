@@ -527,6 +527,18 @@ export default function HomePage() {
               <div className="yt-subtitle">目前已收藏 {videos.length} 條影片</div>
             </div>
             <div className="yt-actions">
+              <a
+                className="yt-action-btn"
+                href="/channel"
+                style={{
+                  background: '#fff7ed',
+                  border: '1px solid #f59e0b',
+                  color: '#9a3412',
+                  textDecoration: 'none',
+                }}
+              >
+                頻道基因
+              </a>
               <button
                 className="yt-action-btn"
                 onClick={() => setActiveTab('signals')}
