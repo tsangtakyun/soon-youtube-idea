@@ -97,11 +97,7 @@ export async function POST(request: Request) {
         .single()
     : await supabase
         .from('ew_channels')
-        .insert({
-          ...payload,
-          channel_id: `channel-dna:${crypto.randomUUID()}`,
-          channel_name: name,
-        })
+        .insert(payload)
         .select('id, name, positioning, value_shift, tone, rubric_config')
         .single()
 

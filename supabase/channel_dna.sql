@@ -9,18 +9,6 @@ create extension if not exists pgcrypto;
 
 create table if not exists public.ew_channels (
   id uuid primary key default gen_random_uuid(),
-  channel_id text unique,
-  channel_name text,
-  channel_url text,
-  region text,
-  language text,
-  category text,
-  subscribers bigint default 0,
-  total_views bigint default 0,
-  video_count bigint default 0,
-  thumbnail_url text,
-  update_priority text,
-  last_updated_at timestamptz,
   user_id uuid,
   name text,
   positioning text,
