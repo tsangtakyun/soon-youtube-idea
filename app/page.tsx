@@ -539,6 +539,18 @@ export default function HomePage() {
               >
                 頻道基因
               </a>
+              <a
+                className="yt-action-btn"
+                href="/workbench"
+                style={{
+                  background: '#ecfdf5',
+                  border: '1px solid #10b981',
+                  color: '#047857',
+                  textDecoration: 'none',
+                }}
+              >
+                論點工作台
+              </a>
               <button
                 className="yt-action-btn"
                 onClick={() => setActiveTab('signals')}
