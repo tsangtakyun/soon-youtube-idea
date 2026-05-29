@@ -24,8 +24,8 @@ export async function GET() {
   }
 
   const { data, error } = await supabase
-    .from('channels')
-    .select('id, name, positioning, value_shift, tone, rubric_config, series(id, name, domain, whitespace_context)')
+    .from('ew_channels')
+    .select('id, name, positioning, value_shift, tone, rubric_config, series:ew_series(id, name, domain, whitespace_context)')
     .not('positioning', 'is', null)
     .order('created_at', { ascending: true })
     .limit(1)
@@ -90,13 +90,13 @@ export async function POST(request: Request) {
 
   const channelResult = id
     ? await supabase
-        .from('channels')
+        .from('ew_channels')
         .update(payload)
         .eq('id', id)
         .select('id, name, positioning, value_shift, tone, rubric_config')
         .single()
     : await supabase
-        .from('channels')
+        .from('ew_channels')
         .insert({
           ...payload,
           channel_id: `channel-dna:${crypto.randomUUID()}`,
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
   }
 
   const channelId = channelResult.data.id as string
-  const { error: deleteError } = await supabase.from('series').delete().eq('channel_id', channelId)
+  const { error: deleteError } = await supabase.from('ew_series').delete().eq('channel_id', channelId)
   if (deleteError) return NextResponse.json({ error: deleteError.message }, { status: 500 })
 
   const cleanSeries = series.map((item) => ({
@@ -122,11 +122,11 @@ export async function POST(request: Request) {
     domain: item.domain.trim(),
     whitespace_context: item.whitespace_context ?? {},
   }))
-  const { error: seriesError } = await supabase.from('series').insert(cleanSeries)
+  const { error: seriesError } = await supabase.from('ew_series').insert(cleanSeries)
   if (seriesError) return NextResponse.json({ error: seriesError.message }, { status: 500 })
 
   const { data: savedSeries } = await supabase
-    .from('series')
+    .from('ew_series')
     .select('id, name, domain, whitespace_context')
     .eq('channel_id', channelId)
     .order('created_at', { ascending: true })
