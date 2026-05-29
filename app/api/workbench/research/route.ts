@@ -1,8 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { NextResponse } from 'next/server'
 
 import { createAdminSupabase } from '@/lib/supabase'
 import {
+  jsonUtf8,
   normalizeFlags,
   normalizeResearchSources,
   parseJson,
@@ -18,12 +18,12 @@ export async function POST(request: Request) {
   const targetMinutes = Number(body?.target_minutes ?? 8) || 8
 
   if (!thesis || !channelId) {
-    return NextResponse.json({ error: '請先選擇頻道並填寫論點。' }, { status: 400 })
+    return jsonUtf8({ error: '請先選擇頻道並填寫論點。' }, { status: 400 })
   }
 
   const supabase = createAdminSupabase()
   if (!supabase) {
-    return NextResponse.json({ error: 'Supabase 未設定。' }, { status: 500 })
+    return jsonUtf8({ error: 'Supabase 未設定。' }, { status: 500 })
   }
 
   const { data: channel, error } = await supabase
@@ -33,12 +33,12 @@ export async function POST(request: Request) {
     .single()
 
   if (error || !channel) {
-    return NextResponse.json({ error: error?.message ?? '找不到頻道基因。' }, { status: 404 })
+    return jsonUtf8({ error: error?.message ?? '找不到頻道基因。' }, { status: 404 })
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
-    return NextResponse.json({
+    return jsonUtf8({
       research_sources: [],
       flags: buildFallbackFlags(thesis, material, targetMinutes),
       search_skipped: true,
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     const parsed = parseJson(raw)
     if (!parsed) throw new Error('AI 沒有回傳可解析的 JSON。')
 
-    return NextResponse.json({
+    return jsonUtf8({
       research_sources: normalizeResearchSources(parsed.research_sources),
       flags: normalizeFlags(parsed.flags),
       search_skipped: false,
@@ -90,7 +90,7 @@ export async function POST(request: Request) {
       .join('')
       .trim()
     const parsed = parseJson(raw)
-    return NextResponse.json({
+    return jsonUtf8({
       research_sources: normalizeResearchSources(parsed?.research_sources),
       flags: parsed ? normalizeFlags(parsed.flags) : buildFallbackFlags(thesis, material, targetMinutes),
       search_skipped: true,

@@ -1,8 +1,7 @@
-import { NextResponse } from 'next/server'
-
 import { createAdminSupabase } from '@/lib/supabase'
 import {
   buildFullScriptText,
+  jsonUtf8,
   normalizeResearchSources,
   normalizeScriptParts,
   WORKBENCH_MODEL,
@@ -20,12 +19,12 @@ export async function POST(request: Request) {
   const researchSources = normalizeResearchSources(body?.research_sources)
 
   if (!thesis || !title || !channelId || parts.some((part) => !part.content)) {
-    return NextResponse.json({ error: '請先完成論點、劇本和頻道選擇。' }, { status: 400 })
+    return jsonUtf8({ error: '請先完成論點、劇本和頻道選擇。' }, { status: 400 })
   }
 
   const supabase = createAdminSupabase()
   if (!supabase) {
-    return NextResponse.json({ error: 'Supabase 未設定。' }, { status: 500 })
+    return jsonUtf8({ error: 'Supabase 未設定。' }, { status: 500 })
   }
 
   const now = new Date().toISOString()
@@ -51,6 +50,6 @@ export async function POST(request: Request) {
     .select('id, title')
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ script: data })
+  if (error) return jsonUtf8({ error: error.message }, { status: 500 })
+  return jsonUtf8({ script: data })
 }

@@ -2,6 +2,12 @@ import { extractJsonObject } from '@/lib/channel-dna'
 
 export const WORKBENCH_MODEL = 'claude-sonnet-4-20250514'
 
+export function jsonUtf8(payload: unknown, init?: ResponseInit) {
+  const headers = new Headers(init?.headers)
+  headers.set('content-type', 'application/json; charset=utf-8')
+  return new Response(JSON.stringify(payload), { ...init, headers })
+}
+
 export const CANTONESE_WRITTEN_TONE = [
   '旁白使用繁體中文書面語，帶香港語感，但避免口語濫用。',
   '不要使用「嘅、咁、啲」作為主要文體；改用「的、這樣、一些」。',
