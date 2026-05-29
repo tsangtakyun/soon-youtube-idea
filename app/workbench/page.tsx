@@ -86,6 +86,7 @@ export default function WorkbenchPage() {
   const [thesis, setThesis] = useState('')
   const [material, setMaterial] = useState('')
   const [hookVariant, setHookVariant] = useState('thesis')
+  const [narrativeMode, setNarrativeMode] = useState('detached_narration')
   const [targetMinutes, setTargetMinutes] = useState(8)
   const [researchSources, setResearchSources] = useState<ResearchSource[]>([])
   const [flags, setFlags] = useState<Flag[]>([])
@@ -170,6 +171,7 @@ export default function WorkbenchPage() {
           channel_id: channelId,
           research_sources: researchSources,
           hook_variant: hookVariant,
+          narrative_mode: narrativeMode,
           target_minutes: targetMinutes,
         }),
       })
@@ -286,6 +288,13 @@ export default function WorkbenchPage() {
                     <option value="thesis">論點型 thesis</option>
                     <option value="mystery">懸念型 mystery</option>
                     <option value="contrast">對照型 contrast</option>
+                  </select>
+                </label>
+                <label className="wb-field" style={{ flex: '1 1 180px', marginBottom: 0 }}>
+                  <span className="wb-label">敘事模式</span>
+                  <select className="wb-select" value={narrativeMode} onChange={(event) => setNarrativeMode(event.target.value)}>
+                    <option value="detached_narration">抽離旁白</option>
+                    <option value="first_person_quest">第一人稱 quest</option>
                   </select>
                 </label>
                 <label className="wb-field" style={{ width: 120, marginBottom: 0 }}>
