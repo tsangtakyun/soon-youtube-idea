@@ -5,8 +5,8 @@ import { EmbeddedMode } from '@/components/EmbeddedMode'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'SOON Editorial Workbench',
-  description: 'Channel DNA and thesis-to-script production line for SOON YouTube.',
+  title: 'SOON 編輯工作台',
+  description: 'SOON YouTube 的頻道基因、題目庫和論點生產線。',
 }
 
 const navLinkStyle = {
@@ -56,7 +56,7 @@ function NavBar() {
           <span style={{ width: '10px', height: '10px', borderRadius: '999px', background: 'var(--soon-purple-light)' }} />
           <span style={{ width: '10px', height: '10px', borderRadius: '999px', background: 'var(--soon-success)' }} />
         </span>
-        SOON Workbench
+        SOON 工作台
       </Link>
       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
         <Link

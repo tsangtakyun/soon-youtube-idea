@@ -28,25 +28,26 @@ type Topic = {
 
 const CSS = `
 * { box-sizing: border-box; }
-body { background: #fbfaf7; color: #241f1a; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-.topics-shell { min-height: 100vh; background: #fbfaf7; }
-.topics-main { width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 72px; }
-.topics-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 26px; }
-.topics-kicker { color: #9a6a32; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; font-weight: 800; }
-.topics-title { margin: 8px 0 10px; font-size: 34px; line-height: 1.12; letter-spacing: 0; }
-.topics-copy { margin: 0; color: #746a5f; line-height: 1.75; max-width: 720px; }
-.topics-link { color: #7c4a14; text-decoration: none; border: 1px solid #e7d4bc; border-radius: 8px; padding: 9px 12px; background: #fff; white-space: nowrap; font-weight: 700; }
-.topics-grid { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 18px; align-items: start; }
-.topics-panel { background: #fff; border: 1px solid #e7ded2; border-radius: 8px; padding: 18px; box-shadow: 0 10px 28px rgba(44, 31, 18, .05); }
-.topics-panel h2 { margin: 0 0 14px; font-size: 18px; }
+body { background: #f7f5f1; color: #1f2328; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.topics-shell { min-height: 100vh; background: linear-gradient(180deg, #faf8f4 0%, #f3efe8 100%); }
+.topics-main { width: min(1220px, calc(100% - 48px)); margin: 0 auto; padding: 34px 0 72px; }
+.topics-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
+.topics-kicker { color: #8f4f17; font-size: 12px; letter-spacing: .14em; font-weight: 800; }
+.topics-title { margin: 8px 0 10px; font-size: 38px; line-height: 1.12; letter-spacing: 0; color: #191511; }
+.topics-copy { margin: 0; color: #5d544b; line-height: 1.85; max-width: 760px; }
+.topics-link { color: #723b09; text-decoration: none; border: 1px solid #d9c7b2; border-radius: 8px; padding: 9px 12px; background: rgba(255,255,255,.86); white-space: nowrap; font-weight: 700; }
+.topics-grid { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 18px; align-items: start; }
+.topics-panel { background: rgba(255,255,255,.9); border: 1px solid #ded3c5; border-radius: 8px; padding: 18px; box-shadow: 0 18px 42px rgba(53, 38, 22, .07); }
+.topics-panel h2 { margin: 0 0 14px; font-size: 18px; color: #201812; }
 .topics-field { display: grid; gap: 7px; margin-bottom: 14px; }
 .topics-label { font-size: 13px; font-weight: 800; color: #40362d; }
-.topics-input, .topics-select, .topics-textarea { width: 100%; border: 1px solid #d9cbbc; border-radius: 8px; background: #fffdf9; color: #241f1a; font: inherit; padding: 10px 12px; }
+.topics-input, .topics-select, .topics-textarea { width: 100%; border: 1px solid #d6c8b8; border-radius: 8px; background: #fffdf9; color: #241f1a; font: inherit; padding: 11px 12px; outline: none; }
+.topics-input:focus, .topics-select:focus, .topics-textarea:focus { border-color: #9a5c1d; box-shadow: 0 0 0 3px rgba(154,92,29,.12); }
 .topics-textarea { min-height: 126px; resize: vertical; line-height: 1.65; }
 .topics-select { min-height: 42px; }
 .topics-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .topics-btn { border: 1px solid #d8c7b2; background: #fff; color: #463425; border-radius: 8px; padding: 10px 14px; font: inherit; font-weight: 800; cursor: pointer; text-decoration: none; }
-.topics-btn.primary { background: #9a5c1d; border-color: #9a5c1d; color: #fff; }
+.topics-btn.primary { background: #2f241c; border-color: #2f241c; color: #fff; }
 .topics-btn.danger { border-color: #efc2bd; color: #9f1d1d; background: #fff7f6; }
 .topics-btn:disabled { opacity: .55; cursor: not-allowed; }
 .topics-status { border-radius: 8px; padding: 11px 12px; margin: 12px 0; font-size: 14px; line-height: 1.55; }
@@ -54,16 +55,17 @@ body { background: #fbfaf7; color: #241f1a; font-family: Inter, -apple-system, B
 .topics-status.error { background: #fff0f0; color: #9f1d1d; border: 1px solid #f6c9c9; }
 .topics-status.success { background: #eefaf2; color: #166534; border: 1px solid #c9eed5; }
 .topics-list { display: grid; gap: 12px; }
-.topics-card { border: 1px solid #e7ded2; border-radius: 8px; background: #fffdf9; padding: 16px; }
+.topics-card { border: 1px solid #e1d7ca; border-radius: 8px; background: #fffdf9; padding: 16px; }
 .topics-card-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 10px; }
-.topics-thesis { margin: 0; color: #241f1a; font-weight: 800; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.topics-material { margin: 8px 0 0; color: #746a5f; line-height: 1.65; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.topics-thesis { margin: 0; color: #201812; font-weight: 800; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.topics-material { margin: 8px 0 0; color: #645b52; line-height: 1.65; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .topics-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
-.topics-badge { display: inline-flex; border-radius: 999px; padding: 4px 8px; background: #f3eadf; color: #7c4a14; font-size: 12px; white-space: nowrap; }
+.topics-badge { display: inline-flex; border-radius: 999px; padding: 4px 8px; background: #f3eadf; color: #723b09; font-size: 12px; white-space: nowrap; }
 .topics-badge.done { background: #eefaf2; color: #166534; }
 .topics-badge.pending { background: #fff6df; color: #8a5b00; }
-.topics-empty { border: 1px dashed #d8c7b2; border-radius: 8px; padding: 18px; color: #746a5f; line-height: 1.7; background: #fffdf9; }
+.topics-empty { border: 1px dashed #d8c7b2; border-radius: 8px; padding: 18px; color: #645b52; line-height: 1.7; background: #fffdf9; }
 @media (max-width: 860px) {
+  .topics-main { width: min(100% - 32px, 1220px); }
   .topics-grid { grid-template-columns: 1fr; }
   .topics-top { flex-direction: column; }
 }
@@ -201,10 +203,10 @@ export default function TopicsPage() {
         <section className="topics-main">
           <header className="topics-top">
             <div>
-              <div className="topics-kicker">Editorial Workbench</div>
+              <div className="topics-kicker">題目管理</div>
               <h1 className="topics-title">題目庫</h1>
               <p className="topics-copy">
-                先把已經想好的論點同手上資料儲低；準備開工時，推上生產線就會自動帶入論點、資料同頻道。
+                先把已經想好的論點和手上資料儲存；準備開工時，推上生產線就會自動帶入論點、資料和頻道。
               </p>
             </div>
             <a className="topics-link" href="/">
@@ -244,7 +246,7 @@ export default function TopicsPage() {
                   className="topics-textarea"
                   value={thesis}
                   onChange={(event) => setThesis(event.target.value)}
-                  placeholder="一句講你想拆的系統，連你自己的切入角度"
+                  placeholder="一句講清楚你想拆解的系統，以及你的切入角度"
                 />
               </label>
               <label className="topics-field">

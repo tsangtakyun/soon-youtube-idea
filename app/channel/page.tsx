@@ -19,48 +19,49 @@ const EMPTY_CHANNEL: ChannelDna = {
 
 const CSS = `
 * { box-sizing: border-box; }
-body { background: #f6f3ee !important; color: #202027 !important; }
-.dna-shell { min-height: 100vh; background: #f6f3ee; color: #202027; }
-.dna-main { width: min(1120px, calc(100vw - 40px)); margin: 0 auto; padding: 32px 0 72px; }
-.dna-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
-.dna-kicker { font-size: 12px; color: #7b7369; letter-spacing: .14em; text-transform: uppercase; }
-.dna-title { margin: 6px 0 8px; font-size: 34px; line-height: 1.08; letter-spacing: -0.01em; }
-.dna-subtitle { color: #645d55; line-height: 1.6; max-width: 660px; font-size: 15px; }
-.dna-link { color: #5746d9; text-decoration: none; font-size: 14px; font-weight: 600; }
-.dna-card { background: #fffaf3; border: 1px solid #e3dbcf; border-radius: 8px; box-shadow: 0 10px 24px rgba(57,43,25,.06); }
-.dna-section { padding: 22px; }
+body { background: #f7f5f1 !important; color: #1f2328 !important; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.dna-shell { min-height: 100vh; background: linear-gradient(180deg, #faf8f4 0%, #f3efe8 100%); color: #1f2328; }
+.dna-main { width: min(1220px, calc(100vw - 48px)); margin: 0 auto; padding: 34px 0 72px; }
+.dna-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
+.dna-kicker { font-size: 12px; color: #8f4f17; letter-spacing: .14em; font-weight: 800; }
+.dna-title { margin: 8px 0 10px; font-size: 38px; line-height: 1.12; letter-spacing: 0; color: #191511; }
+.dna-subtitle { color: #5d544b; line-height: 1.85; max-width: 760px; font-size: 15px; }
+.dna-link { color: #723b09; text-decoration: none; border: 1px solid #d9c7b2; border-radius: 8px; padding: 9px 12px; background: rgba(255,255,255,.86); white-space: nowrap; font-size: 14px; font-weight: 700; }
+.dna-card { background: rgba(255,255,255,.9); border: 1px solid #ded3c5; border-radius: 8px; box-shadow: 0 18px 42px rgba(53, 38, 22, .07); }
+.dna-section { padding: 20px; }
 .dna-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .dna-field { display: grid; gap: 8px; }
-.dna-label { font-size: 13px; color: #514b45; font-weight: 700; }
-.dna-hint { font-size: 12px; color: #8b8175; line-height: 1.45; }
-.dna-input, .dna-textarea { width: 100%; border: 1px solid #d9cfc2; background: #fffdf9; color: #202027; border-radius: 8px; padding: 12px 13px; font: inherit; outline: none; }
-.dna-textarea { min-height: 104px; resize: vertical; line-height: 1.6; }
-.dna-input:focus, .dna-textarea:focus { border-color: #7967ff; box-shadow: 0 0 0 3px rgba(121,103,255,.14); }
+.dna-label { font-size: 13px; color: #40362d; font-weight: 800; }
+.dna-hint { font-size: 12px; color: #746a5f; line-height: 1.5; }
+.dna-input, .dna-textarea { width: 100%; border: 1px solid #d6c8b8; background: #fffdf9; color: #202027; border-radius: 8px; padding: 12px 13px; font: inherit; outline: none; }
+.dna-textarea { min-height: 110px; resize: vertical; line-height: 1.65; }
+.dna-input:focus, .dna-textarea:focus { border-color: #9a5c1d; box-shadow: 0 0 0 3px rgba(154,92,29,.12); }
 .dna-steps { display: flex; gap: 8px; margin-bottom: 16px; }
 .dna-step { height: 8px; flex: 1; border-radius: 99px; background: #e2d8cb; }
-.dna-step.active { background: #6b5cff; }
+.dna-step.active { background: #2f241c; }
 .dna-actions { display: flex; justify-content: space-between; gap: 12px; margin-top: 22px; flex-wrap: wrap; }
-.dna-btn { border: 1px solid #d7ccbf; background: #fffdf9; color: #27242f; border-radius: 8px; padding: 11px 15px; font: inherit; font-weight: 700; cursor: pointer; }
-.dna-btn.primary { border-color: #6b5cff; background: #6b5cff; color: white; }
-.dna-btn.danger { border-color: #ef9a9a; color: #b3261e; background: #fff7f6; }
+.dna-btn { border: 1px solid #d7ccbf; background: #fffdf9; color: #27242f; border-radius: 8px; padding: 11px 15px; font: inherit; font-weight: 800; cursor: pointer; }
+.dna-btn.primary { border-color: #2f241c; background: #2f241c; color: white; }
+.dna-btn.danger { border-color: #efc2bd; color: #9f1d1d; background: #fff7f6; }
 .dna-btn:disabled { opacity: .55; cursor: not-allowed; }
 .dna-series-list { display: grid; gap: 12px; }
-.dna-series-row { display: grid; grid-template-columns: minmax(0, .65fr) minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 14px; border: 1px solid #eadfce; border-radius: 8px; background: #fffdf9; }
-.dna-rubric-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
-.dna-rubric { padding: 14px; border: 1px solid #e4d9ca; border-radius: 8px; background: #fffdf9; display: grid; gap: 10px; }
+.dna-series-row { display: grid; grid-template-columns: minmax(0, .65fr) minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 14px; border: 1px solid #e1d7ca; border-radius: 8px; background: #fffdf9; }
+.dna-rubric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.dna-rubric { padding: 14px; border: 1px solid #e1d7ca; border-radius: 8px; background: #fffdf9; display: grid; gap: 10px; }
 .dna-rubric-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
-.dna-rubric-label { font-weight: 800; font-size: 15px; }
-.dna-rubric-source { font-size: 11px; color: #8b8175; white-space: nowrap; }
+.dna-rubric-label { font-weight: 800; font-size: 15px; color: #201812; }
+.dna-rubric-source { font-size: 11px; color: #746a5f; white-space: nowrap; }
 .dna-status { margin-bottom: 16px; border-radius: 8px; padding: 12px 14px; font-size: 14px; line-height: 1.5; }
-.dna-status.loading { background: #edeaff; color: #4432b8; }
-.dna-status.success { background: #e9f8ef; color: #157347; }
-.dna-status.error { background: #fff0ef; color: #b3261e; }
+.dna-status.loading { background: #eef6ff; color: #1d4e89; border: 1px solid #cfe3ff; }
+.dna-status.success { background: #e9f8ef; color: #157347; border: 1px solid #c9eed5; }
+.dna-status.error { background: #fff0ef; color: #b3261e; border: 1px solid #f6c9c9; }
 .dna-summary { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 18px; align-items: start; }
 .dna-list { display: grid; gap: 10px; }
-.dna-muted { color: #7d746a; font-size: 13px; line-height: 1.55; }
+.dna-muted { color: #645b52; font-size: 13px; line-height: 1.65; }
 .dna-divider { height: 1px; background: #e5dacd; margin: 20px 0; }
 @media (max-width: 960px) {
-  .dna-grid, .dna-summary, .dna-rubric-grid { grid-template-columns: 1fr; }
+  .dna-main { width: min(100vw - 32px, 1220px); }
+  .dna-grid, .dna-summary { grid-template-columns: 1fr; }
   .dna-series-row { grid-template-columns: 1fr; }
   .dna-top { flex-direction: column; }
 }
@@ -137,7 +138,7 @@ export default function ChannelPage() {
 
   async function generateRubric() {
     if (!canGenerate()) {
-      setStatus({ type: 'error', message: '請先填完整頻道基因同至少一個系列題材。' })
+      setStatus({ type: 'error', message: '請先填完整頻道基因和至少一個系列題材。' })
       return
     }
 
@@ -165,7 +166,7 @@ export default function ChannelPage() {
         },
       }))
       setStep(2)
-      setStatus({ type: 'success', message: '已生成五條準則，請逐條檢查同修改。' })
+      setStatus({ type: 'success', message: '已生成五條準則，請逐條檢查和修改。' })
     } catch (error) {
       setStatus({ type: 'error', message: error instanceof Error ? error.message : '生成失敗' })
     } finally {
@@ -221,7 +222,7 @@ export default function ChannelPage() {
       if (!response.ok) throw new Error(data.error || '新增失敗')
       setChannel((current) => ({ ...current, series: [...current.series, data.series] }))
       setNewSeries({ ...EMPTY_SERIES })
-      setStatus({ type: 'success', message: '已新增系列。題材空隙會留待後續 module 計算。' })
+      setStatus({ type: 'success', message: '已新增系列。題材空隙會留待後續模組計算。' })
     } catch (error) {
       setStatus({ type: 'error', message: error instanceof Error ? error.message : '新增失敗' })
     } finally {
@@ -263,12 +264,12 @@ export default function ChannelPage() {
             className="dna-input"
             value={channel.tone}
             onChange={(event) => updateField('tone', event.target.value)}
-            placeholder="你把聲係點？"
+            placeholder="這條頻道的語氣是怎樣？"
           />
         </label>
         <label className="dna-field">
           <span className="dna-label">定位句</span>
-          <span className="dna-hint">你條頻道一句講晒係做咩？</span>
+          <span className="dna-hint">用一句話說明這條頻道做甚麼。</span>
           <textarea
             className="dna-textarea"
             value={channel.positioning}
@@ -277,7 +278,7 @@ export default function ChannelPage() {
         </label>
         <label className="dna-field">
           <span className="dna-label">觀點 / 價值</span>
-          <span className="dna-hint">你想觀眾睇完改變咗咩諗法？</span>
+          <span className="dna-hint">你希望觀眾看完之後改變甚麼想法？</span>
           <textarea
             className="dna-textarea"
             value={channel.value_shift}
@@ -318,7 +319,7 @@ export default function ChannelPage() {
                     series: withUpdatedSeries(current.series, index, { domain: event.target.value }),
                   }))
                 }
-                placeholder="你會拎咩題材嚟講？"
+                placeholder="這個系列會處理甚麼題材？"
               />
             </label>
             <button
@@ -341,7 +342,7 @@ export default function ChannelPage() {
             }))
           }
         >
-          + 加多個系列
+          + 新增一個系列
         </button>
       </div>
     )
@@ -378,15 +379,15 @@ export default function ChannelPage() {
         <main className="dna-main">
           <header className="dna-top">
             <div>
-              <div className="dna-kicker">Editorial Workbench · Module 1</div>
+              <div className="dna-kicker">頻道基因設定</div>
               <h1 className="dna-title">頻道基因</h1>
               <p className="dna-subtitle">
-                先定義頻道定位、價值、語氣同系列題材，再由 AI 提出專屬評分準則。
-                AI 只係提出，把尺由你確認。
+                先定義頻道定位、價值、語氣和系列題材，再由 AI 提出專屬評分準則。
+                AI 只負責提出，把尺由你確認。
               </p>
             </div>
             <Link className="dna-link" href="/">
-              返回趨勢掃描器
+              返回首頁
             </Link>
           </header>
 
@@ -420,7 +421,7 @@ export default function ChannelPage() {
                 <>
                   <h2>第三步：生成 + 確認評分準則</h2>
                   <p className="dna-muted">
-                    五條題目固定，但下面每條「實際標準」都應該貼住你剛才輸入嘅頻道基因。
+                    五條題目固定，但下面每條「實際標準」都應該貼住你剛才輸入的頻道基因。
                   </p>
                   <div className="dna-actions" style={{ justifyContent: 'flex-start' }}>
                     <button className="dna-btn primary" type="button" onClick={generateRubric} disabled={generating}>
@@ -455,7 +456,7 @@ export default function ChannelPage() {
           ) : (
             <div className="dna-summary">
               <section className="dna-card dna-section">
-                <h2>頻道基因 summary</h2>
+                <h2>頻道基因摘要</h2>
                 {renderChannelFields()}
                 <div className="dna-actions">
                   <button className="dna-btn" type="button" onClick={generateRubric} disabled={generating}>
@@ -474,7 +475,7 @@ export default function ChannelPage() {
                         <strong>{item.name}</strong>
                         <div className="dna-muted">{item.domain}</div>
                       </div>
-                      <div className="dna-muted">題材空隙：後續 module 計算</div>
+                      <div className="dna-muted">題材空隙：後續模組計算</div>
                       <button className="dna-btn danger" type="button" onClick={() => void deleteSeries(index)}>
                         刪除
                       </button>
@@ -510,7 +511,7 @@ export default function ChannelPage() {
               <section className="dna-card dna-section">
                 <h2>五條評分準則</h2>
                 <p className="dna-muted">
-                  這五條會成為後續 Subject / Thesis / Angle module 嘅評判尺。
+                  這五條會成為後續題材、論點和角度模組的評判尺。
                 </p>
                 {renderRubricEditor()}
               </section>

@@ -49,25 +49,26 @@ const EMPTY_PARTS: ScriptPart[] = [
 
 const CSS = `
 * { box-sizing: border-box; }
-body { background: #fbfaf7; color: #241f1a; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-.wb-shell { min-height: 100vh; background: #fbfaf7; }
-.wb-main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 72px; }
-.wb-top { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 28px; }
-.wb-kicker { color: #9a6a32; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; }
-.wb-title { margin: 6px 0 8px; font-size: 32px; line-height: 1.15; letter-spacing: 0; }
-.wb-subtitle { margin: 0; color: #746a5f; line-height: 1.7; max-width: 720px; }
-.wb-link { color: #7c4a14; text-decoration: none; border: 1px solid #e7d4bc; border-radius: 8px; padding: 9px 12px; background: #fff; white-space: nowrap; }
-.wb-grid { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 18px; align-items: start; }
-.wb-panel { background: #fff; border: 1px solid #e7ded2; border-radius: 8px; padding: 18px; box-shadow: 0 10px 28px rgba(44, 31, 18, .05); }
-.wb-panel h2 { margin: 0 0 12px; font-size: 18px; }
+body { background: #f7f5f1; color: #1f2328; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.wb-shell { min-height: 100vh; background: linear-gradient(180deg, #faf8f4 0%, #f3efe8 100%); }
+.wb-main { width: min(1220px, calc(100% - 48px)); margin: 0 auto; padding: 34px 0 72px; }
+.wb-top { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 24px; }
+.wb-kicker { color: #8f4f17; font-size: 12px; letter-spacing: .14em; font-weight: 800; }
+.wb-title { margin: 8px 0 10px; font-size: 38px; line-height: 1.12; letter-spacing: 0; color: #191511; }
+.wb-subtitle { margin: 0; color: #5d544b; line-height: 1.85; max-width: 760px; }
+.wb-link { color: #723b09; text-decoration: none; border: 1px solid #d9c7b2; border-radius: 8px; padding: 9px 12px; background: rgba(255,255,255,.86); white-space: nowrap; font-weight: 700; }
+.wb-grid { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 18px; align-items: start; }
+.wb-panel { background: rgba(255,255,255,.9); border: 1px solid #ded3c5; border-radius: 8px; padding: 18px; box-shadow: 0 18px 42px rgba(53, 38, 22, .07); }
+.wb-panel h2 { margin: 0 0 14px; font-size: 18px; color: #201812; }
 .wb-field { display: grid; gap: 7px; margin-bottom: 14px; }
-.wb-label { font-size: 13px; font-weight: 700; color: #40362d; }
-.wb-input, .wb-select, .wb-textarea { width: 100%; border: 1px solid #d9cbbc; border-radius: 8px; background: #fffdf9; color: #241f1a; font: inherit; padding: 10px 12px; }
+.wb-label { font-size: 13px; font-weight: 800; color: #40362d; }
+.wb-input, .wb-select, .wb-textarea { width: 100%; border: 1px solid #d6c8b8; border-radius: 8px; background: #fffdf9; color: #241f1a; font: inherit; padding: 11px 12px; outline: none; }
+.wb-input:focus, .wb-select:focus, .wb-textarea:focus { border-color: #9a5c1d; box-shadow: 0 0 0 3px rgba(154,92,29,.12); }
 .wb-textarea { min-height: 142px; resize: vertical; line-height: 1.65; }
 .wb-select { min-height: 42px; }
 .wb-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.wb-btn { border: 1px solid #d8c7b2; background: #fff; color: #463425; border-radius: 8px; padding: 10px 14px; font: inherit; font-weight: 700; cursor: pointer; }
-.wb-btn.primary { background: #9a5c1d; border-color: #9a5c1d; color: #fff; }
+.wb-btn { border: 1px solid #d8c7b2; background: #fff; color: #463425; border-radius: 8px; padding: 10px 14px; font: inherit; font-weight: 800; cursor: pointer; }
+.wb-btn.primary { background: #2f241c; border-color: #2f241c; color: #fff; }
 .wb-btn.ghost { background: #f8f1e8; }
 .wb-btn:disabled { opacity: .55; cursor: not-allowed; }
 .wb-status { border-radius: 8px; padding: 11px 12px; margin: 12px 0; font-size: 14px; line-height: 1.55; }
@@ -75,16 +76,17 @@ body { background: #fbfaf7; color: #241f1a; font-family: Inter, -apple-system, B
 .wb-status.error { background: #fff0f0; color: #9f1d1d; border: 1px solid #f6c9c9; }
 .wb-status.success { background: #eefaf2; color: #166534; border: 1px solid #c9eed5; }
 .wb-card-list { display: grid; gap: 12px; }
-.wb-source, .wb-flag, .wb-part { border: 1px solid #e7ded2; border-radius: 8px; background: #fffdf9; padding: 14px; }
+.wb-source, .wb-flag, .wb-part { border: 1px solid #e1d7ca; border-radius: 8px; background: #fffdf9; padding: 14px; }
 .wb-source-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
 .wb-source p, .wb-flag p { margin: 0; line-height: 1.65; }
-.wb-badge { display: inline-flex; border-radius: 999px; padding: 4px 8px; background: #f3eadf; color: #7c4a14; font-size: 12px; white-space: nowrap; }
+.wb-badge { display: inline-flex; border-radius: 999px; padding: 4px 8px; background: #f3eadf; color: #723b09; font-size: 12px; white-space: nowrap; }
 .wb-source a { color: #0f5f8f; font-size: 13px; overflow-wrap: anywhere; }
 .wb-flag { border-color: #f1c27d; background: #fff8ed; }
-.wb-part h3 { margin: 0 0 10px; font-size: 16px; }
+.wb-part h3 { margin: 0 0 10px; font-size: 16px; color: #201812; }
 .wb-part textarea { min-height: 190px; }
 .wb-title-input { font-size: 20px; font-weight: 800; }
 @media (max-width: 860px) {
+  .wb-main { width: min(100% - 32px, 1220px); }
   .wb-grid { grid-template-columns: 1fr; }
   .wb-top { flex-direction: column; }
 }
@@ -175,7 +177,7 @@ export default function WorkbenchPage() {
       setResearchSources(data.research_sources ?? [])
       setFlags(data.flags ?? [])
       setSearchSkipped(Boolean(data.search_skipped))
-      setStatus(data.search_skipped ? '研究完成；web search 暫時跳過，已根據現有材料拆解。' : '研究完成。')
+      setStatus(data.search_skipped ? '研究完成；網絡搜尋暫時跳過，已根據現有材料拆解。' : '研究完成。')
       setStatusType('success')
     } catch (error) {
       setStatus(error instanceof Error ? error.message : '研究失敗。')
@@ -187,7 +189,7 @@ export default function WorkbenchPage() {
 
   async function generateScript() {
     setGenerating(true)
-    setStatus('正在生成 6-part 劇本。')
+    setStatus('正在生成六段式劇本。')
     setStatusType('info')
     try {
       const response = await fetch('/api/workbench/generate-script', {
@@ -272,18 +274,18 @@ export default function WorkbenchPage() {
         <main className="wb-main">
           <header className="wb-top">
             <div>
-              <div className="wb-kicker">Editorial Workbench</div>
+              <div className="wb-kicker">劇本生產線</div>
               <h1 className="wb-title">論點 → 劇本生產線</h1>
               <p className="wb-subtitle">
-                你先定論點，AI 負責研究、拆解同整理成 Fern 6-Part 劇本；有結構性大窿先提示，其餘照你的方向推進。
+                你先定論點，AI 負責研究、拆解和整理成 Fern 六段式劇本；只有結構性問題先提示，其餘照你的方向推進。
               </p>
             </div>
-            <a className="wb-link" href="/">返回掃描器</a>
+            <a className="wb-link" href="/">返回首頁</a>
           </header>
 
           <div className="wb-grid">
             <section className="wb-panel">
-              <h2>輸入</h2>
+              <h2>輸入資料</h2>
               <label className="wb-field">
                 <span className="wb-label">頻道</span>
                 <select className="wb-select" value={channelId} onChange={(event) => setChannelId(event.target.value)}>
@@ -303,43 +305,43 @@ export default function WorkbenchPage() {
                 </div>
               ) : null}
               <label className="wb-field">
-                <span className="wb-label">你嘅論點</span>
+                <span className="wb-label">你的論點</span>
                 <textarea
                   ref={thesisRef}
                   className="wb-textarea"
                   value={thesis}
                   onChange={(event) => setThesis(event.target.value)}
-                  placeholder="一句講你想拆嘅系統，連你嘅切入角度"
+                  placeholder="一句講清楚你想拆解的系統，以及你的切入角度"
                 />
               </label>
               <label className="wb-field">
-                <span className="wb-label">你手上嘅資料 / 來源（可留空）</span>
+                <span className="wb-label">你手上的資料 / 來源（可留空）</span>
                 <textarea
                   ref={materialRef}
                   className="wb-textarea"
                   value={material}
                   onChange={(event) => setMaterial(event.target.value)}
-                  placeholder="貼新聞、背景、連結；留空 AI 會自己查"
+                  placeholder="貼新聞、背景、連結；留空時 AI 會自行補查"
                 />
               </label>
               <div className="wb-row">
                 <label className="wb-field" style={{ flex: '1 1 170px', marginBottom: 0 }}>
-                  <span className="wb-label">hook 變體</span>
+                  <span className="wb-label">開場變體</span>
                   <select className="wb-select" value={hookVariant} onChange={(event) => setHookVariant(event.target.value)}>
-                    <option value="thesis">論點型 thesis</option>
-                    <option value="mystery">懸念型 mystery</option>
-                    <option value="contrast">對照型 contrast</option>
+                    <option value="thesis">論點型</option>
+                    <option value="mystery">懸念型</option>
+                    <option value="contrast">對照型</option>
                   </select>
                 </label>
                 <label className="wb-field" style={{ flex: '1 1 180px', marginBottom: 0 }}>
                   <span className="wb-label">敘事模式</span>
                   <select className="wb-select" value={narrativeMode} onChange={(event) => setNarrativeMode(event.target.value)}>
                     <option value="detached_narration">抽離旁白</option>
-                    <option value="first_person_quest">第一人稱 quest</option>
+                    <option value="first_person_quest">第一人稱求證</option>
                   </select>
                 </label>
                 <label className="wb-field" style={{ width: 120, marginBottom: 0 }}>
-                  <span className="wb-label">分鐘</span>
+                  <span className="wb-label">片長（分鐘）</span>
                   <input
                     className="wb-input"
                     type="number"
@@ -360,7 +362,7 @@ export default function WorkbenchPage() {
             <section className="wb-panel">
               <h2>研究結果</h2>
               {status ? <div className={`wb-status ${statusType}`}>{status}</div> : null}
-              {searchSkipped ? <div className="wb-status info">web search 暫時未執行；結果以現有材料和模型分析為主。</div> : null}
+              {searchSkipped ? <div className="wb-status info">網絡搜尋暫時未執行；結果以現有材料和模型分析為主。</div> : null}
 
               {researchSources.length ? (
                 <div className="wb-card-list">
