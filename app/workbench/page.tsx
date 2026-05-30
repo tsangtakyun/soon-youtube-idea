@@ -28,6 +28,16 @@ type ScriptPart = {
   content: string
 }
 
+type TopicPayload = {
+  id: string
+  ew_channel_id: string
+  series_id: string | null
+  thesis: string
+  material: string
+  status: string
+  script_id: string | null
+}
+
 const EMPTY_PARTS: ScriptPart[] = [
   { role: 'hook', roleLabel: '鈎子', content: '' },
   { role: 'setup', roleLabel: '論點 / 鋪陳', content: '' },
@@ -85,6 +95,7 @@ export default function WorkbenchPage() {
   const [channelId, setChannelId] = useState('')
   const [thesis, setThesis] = useState('')
   const [material, setMaterial] = useState('')
+  const [topicId, setTopicId] = useState('')
   const [hookVariant, setHookVariant] = useState('thesis')
   const [narrativeMode, setNarrativeMode] = useState('detached_narration')
   const [targetMinutes, setTargetMinutes] = useState(8)
@@ -118,6 +129,23 @@ export default function WorkbenchPage() {
         const here = rows.find((row: Channel) => row.name.toLowerCase() === 'here')
         setChannelId(here?.id ?? rows[0].id)
       }
+
+      const incomingTopicId = new URLSearchParams(window.location.search).get('topic_id')?.trim()
+      if (!incomingTopicId) return
+
+      const topicResponse = await fetch(`/api/topics?id=${encodeURIComponent(incomingTopicId)}`, { cache: 'no-store' })
+      const topicData = await topicResponse.json()
+      if (!topicResponse.ok) throw new Error(topicData.error || '讀取題目失敗。')
+
+      const topic = topicData.topic as TopicPayload | undefined
+      if (!topic) throw new Error('找不到題目。')
+
+      setTopicId(topic.id)
+      setChannelId(topic.ew_channel_id)
+      setThesis(topic.thesis ?? '')
+      setMaterial(topic.material ?? '')
+      setStatus('已從題目庫載入，可以開始研究和拆解。')
+      setStatusType('success')
     }
     loadChannels().catch((error) => {
       setStatus(error instanceof Error ? error.message : '讀取頻道失敗。')
@@ -210,6 +238,19 @@ export default function WorkbenchPage() {
       })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || '儲存失敗。')
+      if (topicId && data.script?.id) {
+        const topicResponse = await fetch('/api/topics', {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            id: topicId,
+            status: 'scripted',
+            script_id: data.script.id,
+          }),
+        })
+        const topicData = await topicResponse.json()
+        if (!topicResponse.ok) throw new Error(topicData.error || '劇本已儲存，但回寫題目庫失敗。')
+      }
       setStatus(`已儲存：${data.script?.title ?? title}`)
       setStatusType('success')
     } catch (error) {

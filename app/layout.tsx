@@ -73,11 +73,11 @@ function NavBar() {
         <Link href="/channel" style={navLinkStyle}>
           頻道基因
         </Link>
+        <Link href="/topics" style={navLinkStyle}>
+          題目庫
+        </Link>
         <Link href="/workbench" style={navLinkStyle}>
           論點生產線
-        </Link>
-        <Link href="/library" style={navLinkStyle}>
-          題目庫
         </Link>
       </div>
     </nav>
