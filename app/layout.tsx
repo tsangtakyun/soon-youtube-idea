@@ -11,13 +11,13 @@ export const metadata: Metadata = {
 
 const navLinkStyle = {
   fontSize: '13px',
-  color: 'var(--soon-text-secondary)',
+  color: 'var(--soon-nav-muted)',
   textDecoration: 'none',
   padding: '9px 14px',
   letterSpacing: '0.03em',
   borderRadius: 'var(--soon-radius)',
   background: 'transparent',
-  border: '0.5px solid var(--soon-border)',
+  border: '0.5px solid var(--soon-nav-border)',
 }
 
 function NavBar() {
@@ -30,8 +30,8 @@ function NavBar() {
         left: 0,
         right: 0,
         zIndex: 1000,
-        background: '#0f0f0f',
-        borderBottom: '0.5px solid var(--soon-border)',
+        background: 'var(--soon-nav-bg)',
+        borderBottom: '0.5px solid var(--soon-nav-border)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -47,12 +47,12 @@ function NavBar() {
           gap: '12px',
           fontSize: '15px',
           fontWeight: 700,
-          color: 'var(--soon-text)',
+          color: 'var(--soon-nav-text)',
           textDecoration: 'none',
         }}
       >
         <span style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
-          <span style={{ width: '10px', height: '10px', borderRadius: '999px', background: 'var(--soon-purple)' }} />
+          <span style={{ width: '10px', height: '10px', borderRadius: '999px', background: 'var(--soon-tag-accent)' }} />
           <span style={{ width: '10px', height: '10px', borderRadius: '999px', background: 'var(--soon-purple-light)' }} />
           <span style={{ width: '10px', height: '10px', borderRadius: '999px', background: 'var(--soon-success)' }} />
         </span>
@@ -64,7 +64,7 @@ function NavBar() {
           style={{
             ...navLinkStyle,
             color: '#fff',
-            background: 'var(--soon-purple)',
+            background: 'var(--soon-tag-accent)',
             border: '0.5px solid rgba(124,58,237,0.3)',
           }}
         >
@@ -94,7 +94,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         style={{
           paddingTop: '78px',
           margin: 0,
-          fontFamily: 'system-ui, sans-serif',
+          fontFamily: 'var(--soon-font)',
           background: 'var(--soon-bg)',
           color: 'var(--soon-text)',
         }}
