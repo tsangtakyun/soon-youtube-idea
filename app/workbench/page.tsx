@@ -35,8 +35,14 @@ type ClaimRow = {
 type TopicPayload = {
   id: string
   ew_channel_id: string
+  series_id: string | null
   thesis: string
   material: string
+  series?: {
+    id: string
+    name: string
+    domain: string
+  } | null
 }
 
 type SavedScriptSummary = {
@@ -157,6 +163,8 @@ body { margin: 0; background: #f8f4ed; color: #17202a; font-family: Inter, -appl
 export default function WorkbenchPage() {
   const [channels, setChannels] = useState<Channel[]>([])
   const [channelId, setChannelId] = useState('')
+  const [seriesId, setSeriesId] = useState('')
+  const [seriesName, setSeriesName] = useState('')
   const [thesis, setThesis] = useState('')
   const [material, setMaterial] = useState('')
   const [topicId, setTopicId] = useState('')
@@ -215,6 +223,8 @@ export default function WorkbenchPage() {
       setScriptId(saved.id)
       setSelectedSavedScriptId(saved.id)
       setChannelId(saved.ew_channel_id ?? channelId)
+      setSeriesId('')
+      setSeriesName('')
       setThesis(saved.topic ?? '')
       setMaterial(saved.background ?? '')
       setHookVariant(saved.hook_variant || 'mystery')
@@ -308,6 +318,8 @@ export default function WorkbenchPage() {
 
       setTopicId(topic.id)
       setChannelId(topic.ew_channel_id)
+      setSeriesId(topic.series_id ?? '')
+      setSeriesName(topic.series?.name ?? '')
       setThesis(topic.thesis ?? '')
       setMaterial(topic.material ?? '')
       setStatus('已載入題材，可以開始研究。')
@@ -365,28 +377,35 @@ export default function WorkbenchPage() {
   }
 
   async function generateScript() {
+    if (!seriesId) {
+      setStatus('請由題目庫揀一條題目（含系列）推上嚟，先可以生成 Here 系列劇本。')
+      setStatusType('error')
+      return
+    }
+
     setGenerating(true)
-    setStatus('正在生成六段式劇本。')
+    setStatus('正在生成劇本。')
     setStatusType('info')
 
     try {
-      const response = await fetch('/api/workbench/generate-script', {
+      const response = await fetch('/api/workbench/generate-with-engine', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          thesis,
-          material,
+          topic: thesis,
+          background: material,
           channel_id: channelId,
-          research_sources: researchSources,
-          hook_variant: hookVariant,
-          narrative_mode: narrativeMode,
+          series_id: seriesId,
+          hookVariant,
           target_minutes: targetMinutes,
         }),
       })
       const data = await response.json()
       if (!response.ok) throw new Error(apiErrorMessage(data, '生成劇本失敗。'))
-      setTitle(data.title ?? thesis)
-      setParts(data.parts ?? EMPTY_PARTS)
+      const structuredScript = data.structuredScript ?? {}
+      setScriptId(data.script?.id ?? '')
+      setTitle(structuredScript.title ?? thesis)
+      setParts(Array.isArray(structuredScript.parts) && structuredScript.parts.length ? structuredScript.parts : EMPTY_PARTS)
       setStatus('劇本已生成，可以微調後儲存。')
       setStatusType('success')
     } catch (error) {
@@ -715,6 +734,12 @@ export default function WorkbenchPage() {
                 <div className="wb-status info">
                   {selectedChannel.positioning}
                   <br />
+                  {seriesName ? (
+                    <>
+                      目前系列：{seriesName}
+                      <br />
+                    </>
+                  ) : null}
                   語氣：{selectedChannel.tone}
                 </div>
               ) : null}
