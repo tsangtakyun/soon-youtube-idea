@@ -23,6 +23,9 @@ export type ChannelSeries = {
   id?: string
   name: string
   domain: string
+  description?: string | null
+  default_tone?: string | null
+  default_hook?: string | null
   whitespace_context?: Record<string, unknown>
 }
 

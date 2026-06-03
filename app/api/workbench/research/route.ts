@@ -10,6 +10,22 @@ import {
   type WorkbenchChannel,
 } from '@/lib/workbench'
 
+function errorMessage(error: unknown) {
+  if (error instanceof Error) return error.message
+  if (typeof error === 'string') return error
+  if (error && typeof error === 'object') {
+    const record = error as Record<string, unknown>
+    if (typeof record.message === 'string') return record.message
+    if (typeof record.error === 'string') return record.error
+    try {
+      return JSON.stringify(error)
+    } catch {
+      return '研究服務暫時未能回應。'
+    }
+  }
+  return '研究服務暫時未能回應。'
+}
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null)
   const thesis = String(body?.thesis ?? '').trim()
@@ -74,28 +90,37 @@ export async function POST(request: Request) {
       search_skipped: false,
     })
   } catch (err) {
-    const fallbackPrompt = await anthropic.messages.create({
-      model: WORKBENCH_MODEL,
-      max_tokens: 1200,
-      system: buildResearchSystemPrompt(targetMinutes),
-      messages: [
-        {
-          role: 'user',
-          content: `${buildResearchUserPrompt(thesis, material, channel as WorkbenchChannel)}\n\n注意：web search 暫時不可用，只根據用家 material 和一般常識做結構檢查；research_sources 可以留空。`,
-        },
-      ],
-    })
-    const raw = fallbackPrompt.content
-      .map((part) => ('text' in part ? part.text : ''))
-      .join('')
-      .trim()
-    const parsed = parseJson(raw)
-    return jsonUtf8({
-      research_sources: normalizeResearchSources(parsed?.research_sources),
-      flags: parsed ? normalizeFlags(parsed.flags) : buildFallbackFlags(thesis, material, targetMinutes),
-      search_skipped: true,
-      warning: err instanceof Error ? err.message : 'web search 暫時不可用。',
-    })
+    try {
+      const fallbackPrompt = await anthropic.messages.create({
+        model: WORKBENCH_MODEL,
+        max_tokens: 1200,
+        system: buildResearchSystemPrompt(targetMinutes),
+        messages: [
+          {
+            role: 'user',
+            content: `${buildResearchUserPrompt(thesis, material, channel as WorkbenchChannel)}\n\n注意：web search 暫時不可用，只根據用家 material 和一般常識做結構檢查；research_sources 可以留空。`,
+          },
+        ],
+      })
+      const raw = fallbackPrompt.content
+        .map((part) => ('text' in part ? part.text : ''))
+        .join('')
+        .trim()
+      const parsed = parseJson(raw)
+      return jsonUtf8({
+        research_sources: normalizeResearchSources(parsed?.research_sources),
+        flags: parsed ? normalizeFlags(parsed.flags) : buildFallbackFlags(thesis, material, targetMinutes),
+        search_skipped: true,
+        warning: errorMessage(err),
+      })
+    } catch (fallbackError) {
+      return jsonUtf8({
+        research_sources: [],
+        flags: buildFallbackFlags(thesis, material, targetMinutes),
+        search_skipped: true,
+        warning: errorMessage(fallbackError) || errorMessage(err),
+      })
+    }
   }
 }
 

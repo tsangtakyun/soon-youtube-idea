@@ -4,10 +4,22 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 
 import type { ChannelDna, ChannelSeries, RubricCriterion } from '@/lib/channel-dna'
+import {
+  type EngineHookVariant,
+  type EngineTone,
+  VALID_ENGINE_HOOK_VARIANTS,
+  VALID_ENGINE_TONES,
+} from '@/lib/workbench-engine'
 
 type Status = { type: 'loading' | 'success' | 'error'; message: string } | null
 
-const EMPTY_SERIES: ChannelSeries = { name: '', domain: '' }
+const EMPTY_SERIES: ChannelSeries = {
+  name: '',
+  domain: '',
+  description: '',
+  default_tone: 'documentary',
+  default_hook: 'mystery',
+}
 const EMPTY_CHANNEL: ChannelDna = {
   name: '',
   positioning: '',
@@ -17,53 +29,90 @@ const EMPTY_CHANNEL: ChannelDna = {
   series: [{ ...EMPTY_SERIES }],
 }
 
+const TONE_LABELS: Record<EngineTone, string> = {
+  documentary: '紀錄片式 / Documentary',
+  explainer: '解釋型 / Explainer',
+  sharp_commentary: '銳利評論 / Sharp commentary',
+  storyteller: '故事敘事 / Storyteller',
+}
+
+const HOOK_LABELS: Record<EngineHookVariant, string> = {
+  mystery: '懸念開場 / Mystery',
+  thesis: '論點先行 / Thesis',
+  trojan_horse: '借題切入 / Trojan horse',
+  contrast: '強烈對比 / Contrast',
+  confession: '自白式 / Confession',
+  statistic_shock: '數字震撼 / Statistic shock',
+  glory_reversal: '光環反轉 / Glory reversal',
+  conceptual_clickbait: '概念鉤子 / Conceptual clickbait',
+}
+
+function toneLabel(tone: EngineTone) {
+  return `${tone} - ${TONE_LABELS[tone]}`
+}
+
+function hookLabel(hook: EngineHookVariant) {
+  return `${hook} - ${HOOK_LABELS[hook]}`
+}
+
 const CSS = `
 * { box-sizing: border-box; }
-body { background: #080808 !important; color: #f6f2ec !important; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-.dna-shell { min-height: 100vh; background: #080808; color: #f6f2ec; }
-.dna-main { width: min(920px, calc(100vw - 48px)); margin: 0 auto; padding: 34px 0 72px; }
-.dna-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
-.dna-kicker { font-size: 12px; color: #b98955; letter-spacing: .14em; font-weight: 800; }
-.dna-title { margin: 8px 0 10px; font-size: 42px; line-height: 1.08; letter-spacing: 0; color: #fffaf2; }
-.dna-subtitle { color: #bfb6ad; line-height: 1.85; max-width: 760px; font-size: 15px; }
-.dna-link { color: #f6f2ec; text-decoration: none; border: 1px solid rgba(255,255,255,.18); border-radius: 8px; padding: 9px 12px; background: rgba(255,255,255,.06); white-space: nowrap; font-size: 14px; font-weight: 700; }
-.dna-link:hover { background: rgba(255,255,255,.11); border-color: rgba(255,255,255,.3); }
-.dna-card { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); border-radius: 8px; box-shadow: 0 18px 44px rgba(0,0,0,.22); }
+body { margin: 0; background: #f8f4ed !important; color: #17202a !important; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.dna-shell { min-height: 100vh; background: linear-gradient(180deg, rgba(255,255,255,.62), rgba(248,244,237,.96) 260px), #f8f4ed; color: #17202a; }
+.dna-main { width: min(100%, 1640px); margin: 0 auto; padding: 24px 24px 64px; }
+.dna-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 34px; }
+.dna-kicker { font-size: 11px; color: #6f5d4b; letter-spacing: .16em; font-weight: 650; text-transform: uppercase; }
+.dna-title { margin: 8px 0 8px; font-size: clamp(34px, 4vw, 52px); line-height: 1; letter-spacing: 0; color: #111c26; font-weight: 760; }
+.dna-subtitle { color: #5f6873; line-height: 1.7; max-width: 820px; font-size: 14px; margin: 0; }
+.dna-link { color: #33251a; text-decoration: none; border: 1px solid #dacbb9; border-radius: 8px; padding: 10px 16px; background: rgba(255,255,255,.55); white-space: nowrap; font-size: 13px; font-weight: 680; }
+.dna-link:hover { background: #fffaf2; border-color: #bda68c; }
+.dna-card { background: rgba(255,255,255,.5); border: 1px solid #dfd2c1; border-radius: 8px; box-shadow: none; }
 .dna-section { padding: 22px; }
+.dna-section h2, .dna-section h3 { color: #111c26; letter-spacing: 0; }
 .dna-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
 .dna-field { display: grid; gap: 8px; }
-.dna-label { font-size: 13px; color: #fffaf2; font-weight: 800; }
-.dna-hint { font-size: 12px; color: #9d938a; line-height: 1.5; }
-.dna-input, .dna-textarea { width: 100%; border: 1px solid rgba(255,255,255,.16); background: #121212; color: #fffaf2; border-radius: 8px; padding: 12px 13px; font: inherit; outline: none; }
+.dna-label { font-size: 13px; color: #111c26; font-weight: 760; }
+.dna-hint { font-size: 12px; color: #6f5d4b; line-height: 1.5; }
+.dna-input, .dna-textarea, .dna-select { width: 100%; border: 1px solid #dacbb9; background: rgba(255,255,255,.72); color: #17202a; border-radius: 8px; padding: 12px 13px; font: inherit; outline: none; }
 .dna-textarea { min-height: 110px; resize: vertical; line-height: 1.65; }
-.dna-input:focus, .dna-textarea:focus { border-color: #b98955; box-shadow: 0 0 0 3px rgba(185,137,85,.18); }
+.dna-select { min-height: 44px; }
+.dna-input:focus, .dna-textarea:focus, .dna-select:focus { border-color: #6d4df5; box-shadow: 0 0 0 3px rgba(109,77,245,.14); }
 .dna-steps { display: flex; gap: 8px; margin-bottom: 16px; }
-.dna-step { height: 8px; flex: 1; border-radius: 99px; background: rgba(255,255,255,.14); }
-.dna-step.active { background: #f6f2ec; }
+.dna-step { height: 8px; flex: 1; border-radius: 99px; background: #e4d7c7; }
+.dna-step.active { background: #2c1f16; }
 .dna-actions { display: flex; justify-content: space-between; gap: 12px; margin-top: 22px; flex-wrap: wrap; }
-.dna-btn { border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); color: #f6f2ec; border-radius: 8px; padding: 11px 15px; font: inherit; font-weight: 800; cursor: pointer; }
-.dna-btn.primary { border-color: #f6f2ec; background: #f6f2ec; color: #15110d; }
-.dna-btn.danger { border-color: rgba(255,120,120,.32); color: #ffc9c1; background: rgba(120,20,20,.16); }
+.dna-btn { border: 1px solid #dacbb9; background: rgba(255,255,255,.55); color: #33251a; border-radius: 8px; padding: 11px 15px; font: inherit; font-size: 13px; font-weight: 680; cursor: pointer; }
+.dna-btn.primary { border-color: #2c1f16; background: #2c1f16; color: #fffaf2; }
+.dna-btn.danger { border-color: rgba(180,67,54,.32); color: #9c2f22; background: rgba(255,237,234,.72); }
 .dna-btn:disabled { opacity: .55; cursor: not-allowed; }
 .dna-series-list { display: grid; gap: 12px; }
-.dna-series-row { display: grid; grid-template-columns: 1fr; gap: 12px; align-items: start; padding: 14px; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; background: #121212; }
+.dna-series-row { display: grid; grid-template-columns: 1fr; gap: 12px; align-items: start; padding: 14px; border: 1px solid #dfd2c1; border-radius: 8px; background: rgba(255,250,242,.56); }
+.dna-series-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.dna-series-edit-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.dna-inline-label { display: grid; gap: 7px; }
 .dna-rubric-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
-.dna-rubric { padding: 14px; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; background: #121212; display: grid; gap: 10px; }
+.dna-rubric { padding: 14px; border: 1px solid #dfd2c1; border-radius: 8px; background: rgba(255,250,242,.56); display: grid; gap: 10px; }
+.dna-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.dna-section-head h2 { margin: 0 0 8px; }
+.dna-section-head p { margin: 0; }
 .dna-rubric-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
-.dna-rubric-label { font-weight: 800; font-size: 15px; color: #fffaf2; }
-.dna-rubric-source { font-size: 11px; color: #9d938a; white-space: nowrap; }
+.dna-rubric-label { font-weight: 760; font-size: 15px; color: #111c26; }
+.dna-rubric-source { font-size: 11px; color: #6f5d4b; white-space: nowrap; }
 .dna-status { margin-bottom: 16px; border-radius: 8px; padding: 12px 14px; font-size: 14px; line-height: 1.5; }
-.dna-status.loading { background: rgba(238,246,255,.08); color: #cfe3ff; border: 1px solid rgba(207,227,255,.24); }
-.dna-status.success { background: rgba(22,101,52,.18); color: #a7e5ba; border: 1px solid rgba(167,229,186,.24); }
-.dna-status.error { background: rgba(120,20,20,.16); color: #ffc9c1; border: 1px solid rgba(255,120,120,.32); }
+.dna-status.loading { background: rgba(255,255,255,.55); color: #5f6873; border: 1px solid #dfd2c1; }
+.dna-status.success { background: rgba(28,132,80,.1); color: #1d7049; border: 1px solid rgba(28,132,80,.22); }
+.dna-status.error { background: rgba(255,237,234,.72); color: #9c2f22; border: 1px solid rgba(180,67,54,.32); }
 .dna-summary { display: grid; grid-template-columns: 1fr; gap: 18px; align-items: start; }
 .dna-list { display: grid; gap: 10px; }
-.dna-muted { color: #bfb6ad; font-size: 13px; line-height: 1.65; }
-.dna-divider { height: 1px; background: rgba(255,255,255,.12); margin: 20px 0; }
+.dna-muted { color: #5f6873; font-size: 13px; line-height: 1.65; }
+.dna-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.dna-pill { border: 1px solid #dacbb9; border-radius: 999px; padding: 4px 9px; background: rgba(255,255,255,.62); color: #33251a; font-size: 12px; font-weight: 680; }
+.dna-divider { height: 1px; background: #dfd2c1; margin: 20px 0; }
 @media (max-width: 960px) {
-  .dna-main { width: min(100vw - 32px, 920px); }
+  .dna-main { padding: 22px 16px 48px; }
   .dna-grid, .dna-summary { grid-template-columns: 1fr; }
   .dna-series-row { grid-template-columns: 1fr; }
+  .dna-section-head { flex-direction: column; }
   .dna-top { flex-direction: column; }
 }
 `
@@ -81,6 +130,9 @@ export default function ChannelPage() {
   const [saving, setSaving] = useState(false)
   const [addingSeries, setAddingSeries] = useState(false)
   const [newSeries, setNewSeries] = useState<ChannelSeries>({ ...EMPTY_SERIES })
+  const [editingSeriesId, setEditingSeriesId] = useState<string | null>(null)
+  const [editingSeries, setEditingSeries] = useState<ChannelSeries>({ ...EMPTY_SERIES })
+  const [savingSeries, setSavingSeries] = useState(false)
 
   const hasSavedChannel = Boolean(channel.id)
   const domains = useMemo(
@@ -217,6 +269,9 @@ export default function ChannelPage() {
           channel_id: channel.id,
           name: newSeries.name,
           domain: newSeries.domain,
+          description: newSeries.description,
+          default_tone: newSeries.default_tone,
+          default_hook: newSeries.default_hook,
         }),
       })
       const data = await response.json()
@@ -228,6 +283,56 @@ export default function ChannelPage() {
       setStatus({ type: 'error', message: error instanceof Error ? error.message : '新增失敗' })
     } finally {
       setAddingSeries(false)
+    }
+  }
+
+  function startEditingSeries(item: ChannelSeries) {
+    if (!item.id) return
+    setEditingSeriesId(item.id)
+    setEditingSeries({
+      id: item.id,
+      name: item.name,
+      domain: item.domain,
+      description: item.description ?? '',
+      default_tone: item.default_tone ?? 'documentary',
+      default_hook: item.default_hook ?? 'mystery',
+      whitespace_context: item.whitespace_context,
+    })
+  }
+
+  function cancelEditingSeries() {
+    setEditingSeriesId(null)
+    setEditingSeries({ ...EMPTY_SERIES })
+  }
+
+  async function saveEditedSeries() {
+    if (!editingSeriesId || !editingSeries.name.trim() || !editingSeries.domain.trim()) return
+    setSavingSeries(true)
+    try {
+      const response = await fetch('/api/channel-dna/series', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingSeriesId,
+          name: editingSeries.name,
+          domain: editingSeries.domain,
+          description: editingSeries.description,
+          default_tone: editingSeries.default_tone,
+          default_hook: editingSeries.default_hook,
+        }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || '更新系列失敗')
+      setChannel((current) => ({
+        ...current,
+        series: current.series.map((item) => (item.id === editingSeriesId ? data.series : item)),
+      }))
+      cancelEditingSeries()
+      setStatus({ type: 'success', message: '系列已更新' })
+    } catch (error) {
+      setStatus({ type: 'error', message: error instanceof Error ? error.message : '更新系列失敗' })
+    } finally {
+      setSavingSeries(false)
     }
   }
 
@@ -322,6 +427,60 @@ export default function ChannelPage() {
                 }
                 placeholder="這個系列會處理甚麼題材？"
               />
+            </label>
+            <label className="dna-field">
+              <span className="dna-label">Description</span>
+              <textarea
+                className="dna-textarea"
+                value={item.description ?? ''}
+                onChange={(event) =>
+                  setChannel((current) => ({
+                    ...current,
+                    series: withUpdatedSeries(current.series, index, { description: event.target.value }),
+                  }))
+                }
+                placeholder="Editorial direction for this series"
+              />
+            </label>
+            <label className="dna-field">
+              <span className="dna-label">Default tone</span>
+              <select
+                className="dna-select"
+                value={item.default_tone ?? ''}
+                onChange={(event) =>
+                  setChannel((current) => ({
+                    ...current,
+                    series: withUpdatedSeries(current.series, index, { default_tone: event.target.value }),
+                  }))
+                }
+              >
+                <option value="">No default</option>
+                {VALID_ENGINE_TONES.map((tone) => (
+                  <option key={tone} value={tone}>
+                    {toneLabel(tone)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="dna-field">
+              <span className="dna-label">Default hook</span>
+              <select
+                className="dna-select"
+                value={item.default_hook ?? ''}
+                onChange={(event) =>
+                  setChannel((current) => ({
+                    ...current,
+                    series: withUpdatedSeries(current.series, index, { default_hook: event.target.value }),
+                  }))
+                }
+              >
+                <option value="">No default</option>
+                {VALID_ENGINE_HOOK_VARIANTS.map((hook) => (
+                  <option key={hook} value={hook}>
+                    {hookLabel(hook)}
+                  </option>
+                ))}
+              </select>
             </label>
             <button
               className="dna-btn danger"
@@ -472,32 +631,177 @@ export default function ChannelPage() {
                 <div className="dna-list">
                   {channel.series.map((item, index) => (
                     <div className="dna-series-row" key={item.id ?? index}>
-                      <div>
-                        <strong>{item.name}</strong>
-                        <div className="dna-muted">{item.domain}</div>
-                      </div>
-                      <div className="dna-muted">題材空隙：後續模組計算</div>
-                      <button className="dna-btn danger" type="button" onClick={() => void deleteSeries(index)}>
-                        刪除
-                      </button>
+                      {editingSeriesId === item.id ? (
+                        <div className="dna-series-edit-grid">
+                          <label className="dna-inline-label">
+                            <span className="dna-label">系列名稱</span>
+                            <input
+                              aria-label={`Edit series name ${item.id}`}
+                              className="dna-input"
+                              value={editingSeries.name}
+                              onChange={(event) =>
+                                setEditingSeries((current) => ({ ...current, name: event.target.value }))
+                              }
+                            />
+                          </label>
+                          <label className="dna-inline-label">
+                            <span className="dna-label">題材範圍</span>
+                            <input
+                              aria-label={`Edit series domain ${item.id}`}
+                              className="dna-input"
+                              value={editingSeries.domain}
+                              onChange={(event) =>
+                                setEditingSeries((current) => ({ ...current, domain: event.target.value }))
+                              }
+                            />
+                          </label>
+                          <label className="dna-inline-label">
+                            <span className="dna-label">Editorial direction / 系列方向</span>
+                            <textarea
+                              aria-label={`Edit series description ${item.id}`}
+                              className="dna-textarea"
+                              value={editingSeries.description ?? ''}
+                              onChange={(event) =>
+                                setEditingSeries((current) => ({ ...current, description: event.target.value }))
+                              }
+                            />
+                          </label>
+                          <label className="dna-inline-label">
+                            <span className="dna-label">Default tone / 預設語氣</span>
+                            <select
+                              aria-label={`Edit series tone ${item.id}`}
+                              className="dna-select"
+                              value={editingSeries.default_tone ?? ''}
+                              onChange={(event) =>
+                                setEditingSeries((current) => ({ ...current, default_tone: event.target.value }))
+                              }
+                            >
+                              {VALID_ENGINE_TONES.map((tone) => (
+                                <option key={tone} value={tone}>
+                                  {toneLabel(tone)}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="dna-inline-label">
+                            <span className="dna-label">Default hook / 預設開場鉤子</span>
+                            <select
+                              aria-label={`Edit series hook ${item.id}`}
+                              className="dna-select"
+                              value={editingSeries.default_hook ?? ''}
+                              onChange={(event) =>
+                                setEditingSeries((current) => ({ ...current, default_hook: event.target.value }))
+                              }
+                            >
+                              {VALID_ENGINE_HOOK_VARIANTS.map((hook) => (
+                                <option key={hook} value={hook}>
+                                  {hookLabel(hook)}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <div className="dna-series-actions">
+                            <button
+                              className="dna-btn primary"
+                              type="button"
+                              onClick={() => void saveEditedSeries()}
+                              disabled={savingSeries || !editingSeries.name.trim() || !editingSeries.domain.trim()}
+                            >
+                              {savingSeries ? '儲存中...' : '儲存'}
+                            </button>
+                            <button className="dna-btn" type="button" onClick={cancelEditingSeries}>
+                              取消
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div>
+                            <strong>{item.name}</strong>
+                            <div className="dna-muted">{item.domain}</div>
+                            {item.description ? <div className="dna-muted">{item.description}</div> : null}
+                            <div className="dna-meta">
+                              <span className="dna-pill">tone: {item.default_tone || 'none'}</span>
+                              <span className="dna-pill">hook: {item.default_hook || 'none'}</span>
+                            </div>
+                          </div>
+                          <div className="dna-series-actions">
+                            <button className="dna-btn" type="button" onClick={() => startEditingSeries(item)}>
+                              編輯
+                            </button>
+                            <button className="dna-btn danger" type="button" onClick={() => void deleteSeries(index)}>
+                              刪除
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>
                 <div className="dna-divider" />
                 <h3>新增系列</h3>
                 <div className="dna-series-row">
-                  <input
-                    className="dna-input"
-                    value={newSeries.name}
-                    onChange={(event) => setNewSeries((current) => ({ ...current, name: event.target.value }))}
-                    placeholder="系列名稱"
-                  />
-                  <input
-                    className="dna-input"
-                    value={newSeries.domain}
-                    onChange={(event) => setNewSeries((current) => ({ ...current, domain: event.target.value }))}
-                    placeholder="題材"
-                  />
+                  <label className="dna-inline-label">
+                    <span className="dna-label">系列名稱</span>
+                    <input
+                      className="dna-input"
+                      value={newSeries.name}
+                      onChange={(event) => setNewSeries((current) => ({ ...current, name: event.target.value }))}
+                      placeholder="系列名稱"
+                    />
+                  </label>
+                  <label className="dna-inline-label">
+                    <span className="dna-label">題材範圍</span>
+                    <input
+                      className="dna-input"
+                      value={newSeries.domain}
+                      onChange={(event) => setNewSeries((current) => ({ ...current, domain: event.target.value }))}
+                      placeholder="題材"
+                    />
+                  </label>
+                  <label className="dna-inline-label">
+                    <span className="dna-label">Editorial direction / 系列方向</span>
+                    <textarea
+                      className="dna-textarea"
+                      value={newSeries.description ?? ''}
+                      onChange={(event) =>
+                        setNewSeries((current) => ({ ...current, description: event.target.value }))
+                      }
+                      placeholder="Description / editorial direction"
+                    />
+                  </label>
+                  <label className="dna-inline-label">
+                    <span className="dna-label">Default tone / 預設語氣</span>
+                    <select
+                      className="dna-select"
+                      value={newSeries.default_tone ?? ''}
+                      onChange={(event) =>
+                        setNewSeries((current) => ({ ...current, default_tone: event.target.value }))
+                      }
+                    >
+                      {VALID_ENGINE_TONES.map((tone) => (
+                        <option key={tone} value={tone}>
+                          {toneLabel(tone)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="dna-inline-label">
+                    <span className="dna-label">Default hook / 預設開場鉤子</span>
+                    <select
+                      className="dna-select"
+                      value={newSeries.default_hook ?? ''}
+                      onChange={(event) =>
+                        setNewSeries((current) => ({ ...current, default_hook: event.target.value }))
+                      }
+                    >
+                      {VALID_ENGINE_HOOK_VARIANTS.map((hook) => (
+                        <option key={hook} value={hook}>
+                          {hookLabel(hook)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   <button
                     className="dna-btn primary"
                     type="button"
@@ -510,10 +814,22 @@ export default function ChannelPage() {
               </section>
 
               <section className="dna-card dna-section">
-                <h2>五條評分準則</h2>
-                <p className="dna-muted">
-                  這五條會成為後續題材、論點和角度模組的評判尺。
-                </p>
+                <div className="dna-section-head">
+                  <div>
+                    <h2>五條評分準則</h2>
+                    <p className="dna-muted">
+                      這五條會成為後續題材、論點和角度模組的評判尺。
+                    </p>
+                  </div>
+                  <button
+                    className="dna-btn primary"
+                    type="button"
+                    onClick={saveChannel}
+                    disabled={saving || channel.rubric_config.criteria.length !== 5}
+                  >
+                    {saving ? '儲存中...' : '儲存準則'}
+                  </button>
+                </div>
                 {renderRubricEditor()}
               </section>
             </div>

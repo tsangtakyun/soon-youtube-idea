@@ -25,7 +25,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('ew_channels')
-    .select('id, name, positioning, value_shift, tone, rubric_config, series:ew_series(id, name, domain, whitespace_context)')
+    .select('id, name, positioning, value_shift, tone, rubric_config, series:ew_series(id, name, domain, description, default_tone, default_hook, whitespace_context)')
     .not('positioning', 'is', null)
     .order('created_at', { ascending: true })
     .limit(1)
@@ -116,6 +116,9 @@ export async function POST(request: Request) {
     channel_id: channelId,
     name: item.name.trim(),
     domain: item.domain.trim(),
+    description: item.description?.trim() || null,
+    default_tone: item.default_tone?.trim() || null,
+    default_hook: item.default_hook?.trim() || null,
     whitespace_context: item.whitespace_context ?? {},
   }))
   const { error: seriesError } = await supabase.from('ew_series').insert(cleanSeries)
@@ -123,7 +126,7 @@ export async function POST(request: Request) {
 
   const { data: savedSeries } = await supabase
     .from('ew_series')
-    .select('id, name, domain, whitespace_context')
+    .select('id, name, domain, description, default_tone, default_hook, whitespace_context')
     .eq('channel_id', channelId)
     .order('created_at', { ascending: true })
 
