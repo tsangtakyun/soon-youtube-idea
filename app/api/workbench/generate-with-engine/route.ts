@@ -2,6 +2,8 @@ import { createAdminSupabase } from '@/lib/supabase'
 import { buildEngineGenerateBody, type EngineGenerateBody } from '@/lib/workbench-engine'
 import { jsonUtf8 } from '@/lib/workbench'
 
+export const maxDuration = 300
+
 type EngineScriptPart = {
   id?: string
   order?: number
