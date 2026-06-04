@@ -183,13 +183,20 @@ export function normalizeResearchSources(raw: unknown): ResearchSource[] {
       const row = item as Record<string, unknown>
       const supports = String(row.supports ?? 'context')
       return {
-        point: String(row.point ?? '').trim(),
+        point: cleanResearchText(row.point),
         source_url: String(row.source_url ?? '').trim(),
-        credibility: String(row.credibility ?? '').trim(),
+        credibility: cleanResearchText(row.credibility),
         supports: supports === 'for' || supports === 'against' ? supports : 'context',
       } satisfies ResearchSource
     })
     .filter((item) => item.point && item.source_url && item.credibility)
+}
+
+function cleanResearchText(value: unknown) {
+  return String(value ?? '')
+    .replace(/<\/?cite\b[^>]*>/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 export function normalizeFlags(raw: unknown): WorkbenchFlag[] {
