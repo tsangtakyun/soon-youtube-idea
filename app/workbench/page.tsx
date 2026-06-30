@@ -10,10 +10,15 @@ type Channel = {
 }
 
 type ResearchSource = {
-  point: string
-  source_url: string
-  credibility: string
-  supports: 'for' | 'against' | 'context'
+  point?: string
+  source_url?: string
+  credibility?: string
+  supports?: 'for' | 'against' | 'context'
+  claim?: string
+  value?: string
+  dimension?: string
+  verified?: boolean
+  comparison?: string
 }
 
 type Flag = {
@@ -398,6 +403,7 @@ export default function WorkbenchPage() {
           series_id: seriesId,
           hookVariant,
           target_minutes: targetMinutes,
+          research_sources: researchSources,
         }),
       })
       const data = await response.json()
@@ -958,4 +964,3 @@ export default function WorkbenchPage() {
     </>
   )
 }
-

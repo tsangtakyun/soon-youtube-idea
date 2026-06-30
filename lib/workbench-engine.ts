@@ -10,6 +10,15 @@ export type EngineHookVariant =
   | 'conceptual_clickbait'
 export type EngineFramework = 'here_signature' | 'fern_6part'
 
+export type EngineResearchSource = {
+  claim: string
+  value?: string
+  comparison?: string
+  dimension?: string
+  verified?: boolean
+  sourceUrl?: string
+}
+
 export type EngineGenerateBody = {
   topic: string
   background?: string
@@ -17,6 +26,7 @@ export type EngineGenerateBody = {
   tone: EngineTone
   hookVariant: EngineHookVariant
   framework?: EngineFramework
+  researchSources?: EngineResearchSource[]
   editorialDirection?: string
   channelPositioning?: string
   channelValueShift?: string
@@ -94,6 +104,7 @@ export async function buildEngineGenerateBody(
     seriesId: string
     tone?: unknown
     hookVariant?: unknown
+    researchSources?: EngineResearchSource[]
   }
 ): Promise<{ body: EngineGenerateBody; seriesName: string }> {
   const { data: channel, error: channelError } = await supabase
@@ -133,6 +144,7 @@ export async function buildEngineGenerateBody(
       tone,
       hookVariant,
       ...(framework ? { framework } : {}),
+      ...(input.researchSources?.length ? { researchSources: input.researchSources } : {}),
       editorialDirection: seriesRow.description ?? undefined,
       channelPositioning: channelRow.positioning ?? undefined,
       channelValueShift: channelRow.value_shift ?? undefined,
