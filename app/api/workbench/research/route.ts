@@ -5,10 +5,13 @@ import {
   jsonUtf8,
   normalizeFlags,
   normalizeResearchSources,
+  normalizeSnapshotSources,
   parseJson,
   WORKBENCH_MODEL,
   type WorkbenchChannel,
 } from '@/lib/workbench'
+
+type ResearchMode = 'essay' | 'snapshot'
 
 function errorMessage(error: unknown) {
   if (error instanceof Error) return error.message
@@ -32,6 +35,8 @@ export async function POST(request: Request) {
   const material = String(body?.material ?? '').trim()
   const channelId = String(body?.channel_id ?? '').trim()
   const targetMinutes = Number(body?.target_minutes ?? 8) || 8
+  const requestedMode = String(body?.mode ?? body?.research_mode ?? '').trim()
+  const requestedFramework = String(body?.framework ?? '').trim()
 
   if (!thesis || !channelId) {
     return jsonUtf8({ error: '請先選擇頻道並填寫論點。' }, { status: 400 })
@@ -44,13 +49,15 @@ export async function POST(request: Request) {
 
   const { data: channel, error } = await supabase
     .from('ew_channels')
-    .select('id, name, positioning, value_shift, tone, rubric_config')
+    .select('id, name, positioning, value_shift, tone, rubric_config, default_framework')
     .eq('id', channelId)
     .single()
 
   if (error || !channel) {
     return jsonUtf8({ error: error?.message ?? '找不到頻道基因。' }, { status: 404 })
   }
+
+  const mode = resolveResearchMode(requestedMode, requestedFramework, channel)
 
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
@@ -63,11 +70,14 @@ export async function POST(request: Request) {
 
   const anthropic = new Anthropic({ apiKey })
   try {
+    const systemPrompt =
+      mode === 'snapshot' ? buildSnapshotResearchSystemPrompt(targetMinutes) : buildResearchSystemPrompt(targetMinutes)
+    const userPrompt = buildResearchUserPrompt(thesis, material, channel as WorkbenchChannel)
     const response = await anthropic.messages.create({
       model: WORKBENCH_MODEL,
       max_tokens: 2200,
-      system: buildResearchSystemPrompt(targetMinutes),
-      messages: [{ role: 'user', content: buildResearchUserPrompt(thesis, material, channel as WorkbenchChannel) }],
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
       tools: [
         {
           type: 'web_search_20250305',
@@ -85,20 +95,26 @@ export async function POST(request: Request) {
     if (!parsed) throw new Error('AI 沒有回傳可解析的 JSON。')
 
     return jsonUtf8({
-      research_sources: normalizeResearchSources(parsed.research_sources),
+      research_sources:
+        mode === 'snapshot'
+          ? normalizeSnapshotSources(parsed.research_sources)
+          : normalizeResearchSources(parsed.research_sources),
       flags: normalizeFlags(parsed.flags),
       search_skipped: false,
     })
   } catch (err) {
     try {
+      const systemPrompt =
+        mode === 'snapshot' ? buildSnapshotResearchSystemPrompt(targetMinutes) : buildResearchSystemPrompt(targetMinutes)
+      const userPrompt = buildResearchUserPrompt(thesis, material, channel as WorkbenchChannel)
       const fallbackPrompt = await anthropic.messages.create({
         model: WORKBENCH_MODEL,
         max_tokens: 1200,
-        system: buildResearchSystemPrompt(targetMinutes),
+        system: systemPrompt,
         messages: [
           {
             role: 'user',
-            content: `${buildResearchUserPrompt(thesis, material, channel as WorkbenchChannel)}\n\n注意：web search 暫時不可用，只根據用家 material 和一般常識做結構檢查；research_sources 可以留空。`,
+            content: `${userPrompt}\n\n注意：web search 暫時不可用，只根據用家 material 和一般常識做結構檢查；research_sources 可以留空。`,
           },
         ],
       })
@@ -108,7 +124,10 @@ export async function POST(request: Request) {
         .trim()
       const parsed = parseJson(raw)
       return jsonUtf8({
-        research_sources: normalizeResearchSources(parsed?.research_sources),
+        research_sources:
+          mode === 'snapshot'
+            ? normalizeSnapshotSources(parsed?.research_sources)
+            : normalizeResearchSources(parsed?.research_sources),
         flags: parsed ? normalizeFlags(parsed.flags) : buildFallbackFlags(thesis, material, targetMinutes),
         search_skipped: true,
         warning: errorMessage(err),
@@ -122,6 +141,22 @@ export async function POST(request: Request) {
       })
     }
   }
+}
+
+function resolveResearchMode(
+  requestedMode: string,
+  requestedFramework: string,
+  channel: unknown
+): ResearchMode {
+  if (requestedMode === 'snapshot') return 'snapshot'
+  if (requestedMode === 'essay') return 'essay'
+  if (requestedFramework === 'counterfactual_snapshot') return 'snapshot'
+
+  const channelFramework =
+    channel && typeof channel === 'object'
+      ? String((channel as Record<string, unknown>).default_framework ?? '')
+      : ''
+  return channelFramework === 'counterfactual_snapshot' ? 'snapshot' : 'essay'
 }
 
 function buildResearchSystemPrompt(targetMinutes: number) {
@@ -142,6 +177,41 @@ function buildResearchSystemPrompt(targetMinutes: number) {
 
 只輸出 JSON，不要 markdown，不要前言：
 {"research_sources":[{"point":"...","source_url":"...","credibility":"多家媒體報道","supports":"for|against|context"}],"flags":[{"type":"contradiction|no_source|too_broad","message":"..."}]}`
+}
+
+function buildSnapshotResearchSystemPrompt(targetMinutes: number) {
+  return `你是 SOON 編輯工作台的 what-if snapshot 研究員。這個工具是放大器，不是替身。
+
+用家已經有自己的反事實題目 / thesis。你不要代用家改題，不要裁決題目值不值得做。
+你的任務是接受 thesis 作為前提，用 web search 查出可以支撐「今日版本快照」的結構化量化資料。
+
+這個 mode 不是 essay research。不要輸出 point / supports。
+每一項 research_sources 都必須係一個清楚的 snapshot 數值，適合直接餵給 script engine 使用。
+
+每項必須包含：
+- claim：一句完整數值陳述，例如「總人口約2.96億，世界第四」
+- value：只放核心數值，例如「2.96億」
+- dimension：人口 / 經濟 / 軍事 / 領土 / 能源 / 科技 / 文化 / 其他
+- verified：true/false；由你按來源可信度明確判斷，不要留空
+- comparison：為這個數值配一個通用優先的降維對比，方便觀眾理解。優先用星球 / 大洲 / 海洋 / 城市尺度等跨語言 referent；如使用國家或地區 referent，必須在文字中標明參照數值，例如「約等於8個台灣人口（台灣約2,340萬）」。不要自己留待 script engine 計算。
+- source_url：來源網址
+
+verified 規則：
+- 官方統計、國際機構、可靠資料庫，通常可標 true。
+- 推算、二手整理、模型估算、來源不一致，標 false，claim 仍可保留「約 / 估計」字眼。
+
+comparison 規則：
+- comparison 要跟 value 同場生成，不能空白。
+- comparison 係給 script engine 直接照讀的配對對比，不是叫 engine 再計。
+- 如果找不到穩妥 referent，用保守定性比較，但仍要寫明「需在地化替換」。
+
+flag 規則同 essay mode 一樣，只可以在以下三種「結構性大窿」出 flag：
+1. contradiction：用家 thesis 同 material 直接矛盾
+2. no_source：核心反事實前提或核心數值完全找不到來源支撐
+3. too_broad：thesis 闊到塞不入一條 ${targetMinutes} 分鐘的 snapshot 片
+
+只輸出 JSON，不要 markdown，不要前言：
+{"research_sources":[{"claim":"總人口約2.96億，世界第四","value":"2.96億","dimension":"人口","verified":true,"comparison":"約等於8個台灣人口（台灣約2,340萬）","source_url":"https://..."}],"flags":[{"type":"contradiction|no_source|too_broad","message":"..."}]}`
 }
 
 function buildResearchUserPrompt(thesis: string, material: string, channel: WorkbenchChannel) {
