@@ -157,6 +157,15 @@ export type ResearchSource = {
   supports: 'for' | 'against' | 'context'
 }
 
+export type SnapshotResearchSource = {
+  claim: string
+  value: string
+  dimension: string
+  verified: boolean
+  comparison?: string
+  source_url: string
+}
+
 export type WorkbenchFlag = {
   type: 'contradiction' | 'no_source' | 'too_broad'
   message: string
@@ -190,6 +199,23 @@ export function normalizeResearchSources(raw: unknown): ResearchSource[] {
       } satisfies ResearchSource
     })
     .filter((item) => item.point && item.source_url && item.credibility)
+}
+
+export function normalizeSnapshotSources(raw: unknown): SnapshotResearchSource[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((item) => {
+      const row = item as Record<string, unknown>
+      return {
+        claim: cleanResearchText(row.claim),
+        value: cleanResearchText(row.value),
+        dimension: cleanResearchText(row.dimension).slice(0, 40),
+        verified: row.verified === true,
+        comparison: cleanResearchText(row.comparison) || undefined,
+        source_url: String(row.source_url ?? '').trim(),
+      } satisfies SnapshotResearchSource
+    })
+    .filter((item) => item.claim && item.value && item.dimension && item.source_url)
 }
 
 function cleanResearchText(value: unknown) {
