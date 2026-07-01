@@ -13,6 +13,29 @@ import {
 
 type ResearchMode = 'essay' | 'snapshot'
 
+class ResearchTimeoutError extends Error {
+  constructor() {
+    super('Web search research timed out.')
+    this.name = 'ResearchTimeoutError'
+  }
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new ResearchTimeoutError()), timeoutMs)
+    promise.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (error) => {
+        clearTimeout(timer)
+        reject(error)
+      }
+    )
+  })
+}
+
 function errorMessage(error: unknown) {
   if (error instanceof Error) return error.message
   if (typeof error === 'string') return error
@@ -73,21 +96,23 @@ export async function POST(request: Request) {
     const systemPrompt =
       mode === 'snapshot' ? buildSnapshotResearchSystemPrompt(targetMinutes) : buildResearchSystemPrompt(targetMinutes)
     const userPrompt = buildResearchUserPrompt(thesis, material, channel as WorkbenchChannel)
-    const searchTimeout = AbortSignal.timeout(75_000)
-    const response = await anthropic.messages.create({
-      model: WORKBENCH_MODEL,
-      max_tokens: 5000,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-      tools: [
-        {
-          type: 'web_search_20260318',
-          name: 'web_search',
-          max_uses: mode === 'snapshot' ? 4 : 6,
-          response_inclusion: 'excluded',
-        },
-      ] as never,
-    }, { signal: searchTimeout })
+    const response = await withTimeout(
+      anthropic.messages.create({
+        model: WORKBENCH_MODEL,
+        max_tokens: 5000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+        tools: [
+          {
+            type: 'web_search_20260318',
+            name: 'web_search',
+            max_uses: mode === 'snapshot' ? 4 : 6,
+            response_inclusion: 'excluded',
+          },
+        ] as never,
+      }),
+      70_000
+    )
 
     const raw = response.content
       .map((part) => ('text' in part ? part.text : ''))
@@ -105,6 +130,15 @@ export async function POST(request: Request) {
       search_skipped: false,
     })
   } catch (err) {
+    if (err instanceof ResearchTimeoutError) {
+      return jsonUtf8({
+        research_sources: [],
+        flags: buildFallbackFlags(thesis, material, targetMinutes),
+        search_skipped: true,
+        warning: err.message,
+      })
+    }
+
     try {
       const systemPrompt =
         mode === 'snapshot' ? buildSnapshotResearchSystemPrompt(targetMinutes) : buildResearchSystemPrompt(targetMinutes)
