@@ -75,14 +75,15 @@ export async function POST(request: Request) {
     const userPrompt = buildResearchUserPrompt(thesis, material, channel as WorkbenchChannel)
     const response = await anthropic.messages.create({
       model: WORKBENCH_MODEL,
-      max_tokens: 2200,
+      max_tokens: 5000,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
       tools: [
         {
-          type: 'web_search_20250305',
+          type: 'web_search_20260318',
           name: 'web_search',
           max_uses: 8,
+          response_inclusion: 'excluded',
         },
       ] as never,
     })
