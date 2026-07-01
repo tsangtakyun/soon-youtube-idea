@@ -1,6 +1,6 @@
 import { extractJsonObject } from '@/lib/channel-dna'
 
-export const WORKBENCH_MODEL = 'claude-sonnet-4-20250514'
+export const WORKBENCH_MODEL = 'claude-sonnet-4-6'
 
 export function jsonUtf8(payload: unknown, init?: ResponseInit) {
   const headers = new Headers(init?.headers)
