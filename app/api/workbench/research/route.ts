@@ -73,6 +73,7 @@ export async function POST(request: Request) {
     const systemPrompt =
       mode === 'snapshot' ? buildSnapshotResearchSystemPrompt(targetMinutes) : buildResearchSystemPrompt(targetMinutes)
     const userPrompt = buildResearchUserPrompt(thesis, material, channel as WorkbenchChannel)
+    const searchTimeout = AbortSignal.timeout(75_000)
     const response = await anthropic.messages.create({
       model: WORKBENCH_MODEL,
       max_tokens: 5000,
@@ -86,7 +87,7 @@ export async function POST(request: Request) {
           response_inclusion: 'excluded',
         },
       ] as never,
-    })
+    }, { signal: searchTimeout })
 
     const raw = response.content
       .map((part) => ('text' in part ? part.text : ''))
