@@ -10,10 +10,15 @@ type Channel = {
 }
 
 type ResearchSource = {
-  point: string
-  source_url: string
-  credibility: string
-  supports: 'for' | 'against' | 'context'
+  point?: string
+  source_url?: string
+  credibility?: string
+  supports?: 'for' | 'against' | 'context'
+  claim?: string
+  value?: string
+  dimension?: string
+  verified?: boolean
+  comparison?: string
 }
 
 type Flag = {
@@ -100,6 +105,21 @@ const FACT_CHECK_HEAD_REMARK =
 
 const FACT_CHECK_TAIL_REMARK =
   '⚠️ 事實查核提醒｜AI 嘅強項係結構同敘事，唔係事實準確性。呢份稿入面每一個具體事實都可能係錯或者捏造嘅，出街前請確認每個說法都有可靠來源。查核責任在使用者。'
+
+function researchSourceTitle(source: ResearchSource) {
+  return source.point || source.claim || '未命名研究點'
+}
+
+function researchSourceBadge(source: ResearchSource) {
+  if (source.credibility) return source.credibility
+  if (source.dimension) return `${source.dimension} · ${source.verified ? '已核實' : '未核實'}`
+  return ''
+}
+
+function researchSourceMeta(source: ResearchSource) {
+  if (source.supports) return source.supports
+  return [source.value, source.comparison].filter(Boolean).join(' ｜ ')
+}
 
 const CSS = `
 * { box-sizing: border-box; }
@@ -199,6 +219,8 @@ export default function WorkbenchPage() {
     () => channels.find((channel) => channel.id === channelId),
     [channels, channelId]
   )
+  const selectedFramework = narrativeMode === 'counterfactual_snapshot' ? 'counterfactual_snapshot' : undefined
+  const researchMode = narrativeMode === 'counterfactual_snapshot' ? 'snapshot' : 'essay'
 
   async function loadSavedScripts(nextChannelId = channelId) {
     const query = nextChannelId ? `?channel_id=${encodeURIComponent(nextChannelId)}` : ''
@@ -359,7 +381,14 @@ export default function WorkbenchPage() {
       const response = await fetch('/api/workbench/research', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ thesis, material, channel_id: channelId, target_minutes: targetMinutes }),
+        body: JSON.stringify({
+          thesis,
+          material,
+          channel_id: channelId,
+          target_minutes: targetMinutes,
+          mode: researchMode,
+          framework: selectedFramework,
+        }),
       })
       const data = await response.json()
       if (!response.ok) throw new Error(apiErrorMessage(data, '研究失敗。'))
@@ -397,7 +426,9 @@ export default function WorkbenchPage() {
           channel_id: channelId,
           series_id: seriesId,
           hookVariant,
+          framework: selectedFramework,
           target_minutes: targetMinutes,
+          research_sources: researchSources,
         }),
       })
       const data = await response.json()
@@ -781,6 +812,7 @@ export default function WorkbenchPage() {
                   <select className="wb-select" value={narrativeMode} onChange={(event) => setNarrativeMode(event.target.value)}>
                     <option value="detached_narration">抽離旁白</option>
                     <option value="first_person_quest">第一人稱求證</option>
+                    <option value="counterfactual_snapshot">反事實現狀快照</option>
                   </select>
                 </label>
 
@@ -814,14 +846,16 @@ export default function WorkbenchPage() {
                   {researchSources.map((source, index) => (
                     <article className="wb-source" key={`${source.source_url}-${index}`}>
                       <div className="wb-source-top">
-                        <p>{source.point}</p>
-                        <span className="wb-badge">{source.credibility}</span>
+                        <p>{researchSourceTitle(source)}</p>
+                        {researchSourceBadge(source) ? <span className="wb-badge">{researchSourceBadge(source)}</span> : null}
                       </div>
                       <div className="wb-row" style={{ marginTop: 10 }}>
-                        <span className="wb-badge">{source.supports}</span>
-                        <a href={source.source_url} target="_blank" rel="noreferrer">
-                          {source.source_url}
-                        </a>
+                        {researchSourceMeta(source) ? <span className="wb-badge">{researchSourceMeta(source)}</span> : null}
+                        {source.source_url ? (
+                          <a href={source.source_url} target="_blank" rel="noreferrer">
+                            {source.source_url}
+                          </a>
+                        ) : null}
                       </div>
                     </article>
                   ))}
@@ -958,4 +992,3 @@ export default function WorkbenchPage() {
     </>
   )
 }
-

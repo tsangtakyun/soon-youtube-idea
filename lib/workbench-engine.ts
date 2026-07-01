@@ -8,7 +8,16 @@ export type EngineHookVariant =
   | 'statistic_shock'
   | 'glory_reversal'
   | 'conceptual_clickbait'
-export type EngineFramework = 'here_signature' | 'fern_6part'
+export type EngineFramework = 'here_signature' | 'fern_6part' | 'counterfactual_snapshot'
+
+export type EngineResearchSource = {
+  claim: string
+  value?: string
+  comparison?: string
+  dimension?: string
+  verified?: boolean
+  sourceUrl?: string
+}
 
 export type EngineGenerateBody = {
   topic: string
@@ -17,6 +26,7 @@ export type EngineGenerateBody = {
   tone: EngineTone
   hookVariant: EngineHookVariant
   framework?: EngineFramework
+  researchSources?: EngineResearchSource[]
   editorialDirection?: string
   channelPositioning?: string
   channelValueShift?: string
@@ -66,7 +76,11 @@ export const VALID_ENGINE_HOOK_VARIANTS: EngineHookVariant[] = [
   'conceptual_clickbait',
 ]
 
-export const VALID_ENGINE_FRAMEWORKS: EngineFramework[] = ['here_signature', 'fern_6part']
+export const VALID_ENGINE_FRAMEWORKS: EngineFramework[] = [
+  'here_signature',
+  'fern_6part',
+  'counterfactual_snapshot',
+]
 
 function resolveTone(value: unknown): EngineTone | null {
   return VALID_ENGINE_TONES.includes(value as EngineTone) ? (value as EngineTone) : null
@@ -94,6 +108,8 @@ export async function buildEngineGenerateBody(
     seriesId: string
     tone?: unknown
     hookVariant?: unknown
+    framework?: unknown
+    researchSources?: EngineResearchSource[]
   }
 ): Promise<{ body: EngineGenerateBody; seriesName: string }> {
   const { data: channel, error: channelError } = await supabase
@@ -122,7 +138,7 @@ export async function buildEngineGenerateBody(
   const tone = resolveTone(input.tone) ?? resolveTone(seriesRow.default_tone) ?? 'documentary'
   const hookVariant =
     resolveHookVariant(input.hookVariant) ?? resolveHookVariant(seriesRow.default_hook) ?? 'mystery'
-  const framework = resolveFramework(channelRow.default_framework)
+  const framework = resolveFramework(input.framework) ?? resolveFramework(channelRow.default_framework)
 
   return {
     seriesName: seriesRow.name,
@@ -133,6 +149,7 @@ export async function buildEngineGenerateBody(
       tone,
       hookVariant,
       ...(framework ? { framework } : {}),
+      ...(input.researchSources?.length ? { researchSources: input.researchSources } : {}),
       editorialDirection: seriesRow.description ?? undefined,
       channelPositioning: channelRow.positioning ?? undefined,
       channelValueShift: channelRow.value_shift ?? undefined,

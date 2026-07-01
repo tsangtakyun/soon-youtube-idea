@@ -13,6 +13,29 @@ import {
 
 type ResearchMode = 'essay' | 'snapshot'
 
+class ResearchTimeoutError extends Error {
+  constructor() {
+    super('Web search research timed out.')
+    this.name = 'ResearchTimeoutError'
+  }
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new ResearchTimeoutError()), timeoutMs)
+    promise.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (error) => {
+        clearTimeout(timer)
+        reject(error)
+      }
+    )
+  })
+}
+
 function errorMessage(error: unknown) {
   if (error instanceof Error) return error.message
   if (typeof error === 'string') return error
@@ -73,19 +96,23 @@ export async function POST(request: Request) {
     const systemPrompt =
       mode === 'snapshot' ? buildSnapshotResearchSystemPrompt(targetMinutes) : buildResearchSystemPrompt(targetMinutes)
     const userPrompt = buildResearchUserPrompt(thesis, material, channel as WorkbenchChannel)
-    const response = await anthropic.messages.create({
-      model: WORKBENCH_MODEL,
-      max_tokens: 2200,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-      tools: [
-        {
-          type: 'web_search_20250305',
-          name: 'web_search',
-          max_uses: 8,
-        },
-      ] as never,
-    })
+    const response = await withTimeout(
+      anthropic.messages.create({
+        model: WORKBENCH_MODEL,
+        max_tokens: 5000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+        tools: [
+          {
+            type: 'web_search_20260318',
+            name: 'web_search',
+            max_uses: mode === 'snapshot' ? 4 : 6,
+            response_inclusion: 'excluded',
+          },
+        ] as never,
+      }),
+      70_000
+    )
 
     const raw = response.content
       .map((part) => ('text' in part ? part.text : ''))
@@ -103,6 +130,107 @@ export async function POST(request: Request) {
       search_skipped: false,
     })
   } catch (err) {
+    if (err instanceof ResearchTimeoutError) {
+      if (mode === 'snapshot') {
+        try {
+          const systemPrompt = `${buildSnapshotResearchSystemPrompt(targetMinutes)}
+
+網絡搜尋已超時。請改為產出「未核實 snapshot 草稿」，讓用家可以繼續測試流程。
+規則：
+- 所有 research_sources 必須標 verified:false。
+- source_url 一律填 "[需查核：網絡搜尋超時]"。
+- 不准創作精確數字、百分比、年份、金額、排名、倍數或城市比較；除非用家 material 已明確提供。
+- value 如果無用家提供嘅數字,一律填 "[需查核]"。
+- comparison 如果無用家提供嘅對比,一律填 "[需查核：不可自行換算]"。
+- claim 必須用「可能 / 需要查核 / 初步看」等 hedging 語氣,不可寫成定論。
+- 不要聲稱資料已由網絡查證。`
+          const userPrompt = buildResearchUserPrompt(thesis, material, channel as WorkbenchChannel)
+          const fallbackPrompt = await withTimeout(
+            anthropic.messages.create({
+              model: WORKBENCH_MODEL,
+              max_tokens: 1800,
+              system: systemPrompt,
+              messages: [
+                {
+                  role: 'user',
+                  content: `${userPrompt}\n\n請產出 4-6 條最適合測試 counterfactual snapshot framework 的未核實 snapshot candidates。`,
+                },
+              ],
+            }),
+            25_000
+          )
+          const raw = fallbackPrompt.content
+            .map((part) => ('text' in part ? part.text : ''))
+            .join('')
+            .trim()
+          const parsed = parseJson(raw)
+
+          return jsonUtf8({
+            research_sources: normalizeSnapshotSources(parsed?.research_sources),
+            flags: parsed ? normalizeFlags(parsed.flags) : buildFallbackFlags(thesis, material, targetMinutes),
+            search_skipped: true,
+            warning: err.message,
+          })
+        } catch {
+          return jsonUtf8({
+            research_sources: [],
+            flags: buildFallbackFlags(thesis, material, targetMinutes),
+            search_skipped: true,
+            warning: err.message,
+          })
+        }
+      }
+
+      try {
+        const systemPrompt = `${buildResearchSystemPrompt(targetMinutes)}
+
+網絡搜尋已超時。請改為產出「未核實研究草稿」，讓用家可以繼續測試流程。
+規則：
+- research_sources 要有 3-5 條。
+- source_url 一律填 "[需查核：網絡搜尋超時]"。
+- credibility 一律寫 "未核實；只根據輸入資料和模型理解"。
+- 不准創作精確數字、百分比、年份、金額、排名、倍數或城市比較；除非用家 material 已明確提供。
+- 如需要數字,改寫成定性描述或標 "[需查核]"。
+- point 必須用「可能 / 需要查核 / 初步看」等 hedging 語氣。
+- 不要聲稱資料已由網絡查證。`
+        const userPrompt = buildResearchUserPrompt(thesis, material, channel as WorkbenchChannel)
+        const fallbackPrompt = await withTimeout(
+          anthropic.messages.create({
+            model: WORKBENCH_MODEL,
+            max_tokens: 1500,
+            system: systemPrompt,
+            messages: [
+              {
+                role: 'user',
+                content: `${userPrompt}\n\n請產出 3-5 條可供 Here/Fern essay flow 測試的未核實研究草稿。`,
+              },
+            ],
+          }),
+          25_000
+        )
+        const raw = fallbackPrompt.content
+          .map((part) => ('text' in part ? part.text : ''))
+          .join('')
+          .trim()
+        const parsed = parseJson(raw)
+
+        return jsonUtf8({
+          research_sources: normalizeResearchSources(parsed?.research_sources),
+          flags: parsed ? normalizeFlags(parsed.flags) : buildFallbackFlags(thesis, material, targetMinutes),
+          search_skipped: true,
+          warning: err.message,
+        })
+      } catch {
+        return jsonUtf8({
+          research_sources: [],
+          flags: buildFallbackFlags(thesis, material, targetMinutes),
+          search_skipped: true,
+          warning: err.message,
+        })
+      }
+
+    }
+
     try {
       const systemPrompt =
         mode === 'snapshot' ? buildSnapshotResearchSystemPrompt(targetMinutes) : buildResearchSystemPrompt(targetMinutes)

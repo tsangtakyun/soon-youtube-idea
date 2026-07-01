@@ -1,5 +1,9 @@
 import { createAdminSupabase } from '@/lib/supabase'
-import { buildEngineGenerateBody, type EngineGenerateBody } from '@/lib/workbench-engine'
+import {
+  buildEngineGenerateBody,
+  type EngineGenerateBody,
+  type EngineResearchSource,
+} from '@/lib/workbench-engine'
 import { jsonUtf8 } from '@/lib/workbench'
 
 export const maxDuration = 300
@@ -34,6 +38,35 @@ function normalizeEngineBaseUrl() {
   return (process.env.SCRIPT_ENGINE_URL || 'https://script-generator-youtube.vercel.app').replace(/\/+$/, '')
 }
 
+function cleanText(value: unknown, maxLength: number) {
+  return String(value ?? '').trim().slice(0, maxLength).trim()
+}
+
+function normalizeRawResearchSources(raw: unknown): unknown[] {
+  return Array.isArray(raw) ? raw : []
+}
+
+function normalizeEngineResearchSources(raw: unknown): EngineResearchSource[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((item): EngineResearchSource | null => {
+      const row = item as Record<string, unknown>
+      const claim = cleanText(row.claim ?? row.point, 300)
+      if (!claim) return null
+      const credibility = cleanText(row.credibility, 120)
+
+      return {
+        claim,
+        value: cleanText(row.value, 80) || undefined,
+        comparison: cleanText(row.comparison, 200) || undefined,
+        dimension: cleanText(row.dimension, 40) || undefined,
+        verified: row.verified === true || (credibility ? !credibility.includes('未核實') : false),
+        sourceUrl: cleanText(row.sourceUrl ?? row.source_url, 400) || undefined,
+      }
+    })
+    .filter((source): source is EngineResearchSource => Boolean(source))
+}
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null)
   const topic = String(body?.topic ?? body?.thesis ?? '').trim()
@@ -41,6 +74,8 @@ export async function POST(request: Request) {
   const channelId = String(body?.channel_id ?? '').trim()
   const seriesId = String(body?.series_id ?? body?.seriesId ?? '').trim()
   const targetMinutes = Number(body?.target_minutes ?? body?.targetMinutes ?? 8) || 8
+  const rawResearchSources = normalizeRawResearchSources(body?.research_sources ?? body?.researchSources)
+  const engineResearchSources = normalizeEngineResearchSources(rawResearchSources)
 
   if (!topic || !channelId || !seriesId) {
     return jsonUtf8({ error: 'Missing topic/thesis, channel_id, or series_id.' }, { status: 400 })
@@ -61,6 +96,8 @@ export async function POST(request: Request) {
       seriesId,
       tone: body?.tone,
       hookVariant: body?.hookVariant ?? body?.hook_variant,
+      framework: body?.framework,
+      researchSources: engineResearchSources,
     })
     engineBody = resolved.body
   } catch (error) {
@@ -105,7 +142,7 @@ export async function POST(request: Request) {
       tone: String(engineData.structuredScript.tone ?? 'documentary'),
       target_minutes: Number(engineData.structuredScript.targetMinutes ?? targetMinutes) || targetMinutes,
       parts,
-      research_sources: [],
+      research_sources: rawResearchSources,
       ew_channel_id: channelId,
       ai_draft: String(engineData.script ?? ''),
       model: 'script-generator-youtube/api/generate',
