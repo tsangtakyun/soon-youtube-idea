@@ -95,6 +95,7 @@ export async function POST(request: Request) {
       seriesId,
       tone: body?.tone,
       hookVariant: body?.hookVariant ?? body?.hook_variant,
+      framework: body?.framework,
       researchSources: engineResearchSources,
     })
     engineBody = resolved.body
