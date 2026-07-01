@@ -139,7 +139,10 @@ export async function POST(request: Request) {
 規則：
 - 所有 research_sources 必須標 verified:false。
 - source_url 一律填 "[需查核：網絡搜尋超時]"。
-- claim/value/comparison 必須用「約 / 估計 / 需查核」等 hedging 語氣。
+- 不准創作精確數字、百分比、年份、金額、排名、倍數或城市比較；除非用家 material 已明確提供。
+- value 如果無用家提供嘅數字,一律填 "[需查核]"。
+- comparison 如果無用家提供嘅對比,一律填 "[需查核：不可自行換算]"。
+- claim 必須用「可能 / 需要查核 / 初步看」等 hedging 語氣,不可寫成定論。
 - 不要聲稱資料已由網絡查證。`
           const userPrompt = buildResearchUserPrompt(thesis, material, channel as WorkbenchChannel)
           const fallbackPrompt = await withTimeout(
@@ -186,6 +189,8 @@ export async function POST(request: Request) {
 - research_sources 要有 3-5 條。
 - source_url 一律填 "[需查核：網絡搜尋超時]"。
 - credibility 一律寫 "未核實；只根據輸入資料和模型理解"。
+- 不准創作精確數字、百分比、年份、金額、排名、倍數或城市比較；除非用家 material 已明確提供。
+- 如需要數字,改寫成定性描述或標 "[需查核]"。
 - point 必須用「可能 / 需要查核 / 初步看」等 hedging 語氣。
 - 不要聲稱資料已由網絡查證。`
         const userPrompt = buildResearchUserPrompt(thesis, material, channel as WorkbenchChannel)

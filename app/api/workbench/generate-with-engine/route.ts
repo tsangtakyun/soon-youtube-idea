@@ -51,15 +51,16 @@ function normalizeEngineResearchSources(raw: unknown): EngineResearchSource[] {
   return raw
     .map((item): EngineResearchSource | null => {
       const row = item as Record<string, unknown>
-      const claim = cleanText(row.claim, 300)
+      const claim = cleanText(row.claim ?? row.point, 300)
       if (!claim) return null
+      const credibility = cleanText(row.credibility, 120)
 
       return {
         claim,
         value: cleanText(row.value, 80) || undefined,
         comparison: cleanText(row.comparison, 200) || undefined,
         dimension: cleanText(row.dimension, 40) || undefined,
-        verified: row.verified === true,
+        verified: row.verified === true || (credibility ? !credibility.includes('未核實') : false),
         sourceUrl: cleanText(row.sourceUrl ?? row.source_url, 400) || undefined,
       }
     })
