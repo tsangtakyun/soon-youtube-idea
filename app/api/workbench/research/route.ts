@@ -82,7 +82,7 @@ export async function POST(request: Request) {
         {
           type: 'web_search_20260318',
           name: 'web_search',
-          max_uses: 8,
+          max_uses: mode === 'snapshot' ? 4 : 6,
           response_inclusion: 'excluded',
         },
       ] as never,
