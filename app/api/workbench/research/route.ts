@@ -178,12 +178,52 @@ export async function POST(request: Request) {
         }
       }
 
-      return jsonUtf8({
-        research_sources: [],
-        flags: buildFallbackFlags(thesis, material, targetMinutes),
-        search_skipped: true,
-        warning: err.message,
-      })
+      try {
+        const systemPrompt = `${buildResearchSystemPrompt(targetMinutes)}
+
+網絡搜尋已超時。請改為產出「未核實研究草稿」，讓用家可以繼續測試流程。
+規則：
+- research_sources 要有 3-5 條。
+- source_url 一律填 "[需查核：網絡搜尋超時]"。
+- credibility 一律寫 "未核實；只根據輸入資料和模型理解"。
+- point 必須用「可能 / 需要查核 / 初步看」等 hedging 語氣。
+- 不要聲稱資料已由網絡查證。`
+        const userPrompt = buildResearchUserPrompt(thesis, material, channel as WorkbenchChannel)
+        const fallbackPrompt = await withTimeout(
+          anthropic.messages.create({
+            model: WORKBENCH_MODEL,
+            max_tokens: 1500,
+            system: systemPrompt,
+            messages: [
+              {
+                role: 'user',
+                content: `${userPrompt}\n\n請產出 3-5 條可供 Here/Fern essay flow 測試的未核實研究草稿。`,
+              },
+            ],
+          }),
+          25_000
+        )
+        const raw = fallbackPrompt.content
+          .map((part) => ('text' in part ? part.text : ''))
+          .join('')
+          .trim()
+        const parsed = parseJson(raw)
+
+        return jsonUtf8({
+          research_sources: normalizeResearchSources(parsed?.research_sources),
+          flags: parsed ? normalizeFlags(parsed.flags) : buildFallbackFlags(thesis, material, targetMinutes),
+          search_skipped: true,
+          warning: err.message,
+        })
+      } catch {
+        return jsonUtf8({
+          research_sources: [],
+          flags: buildFallbackFlags(thesis, material, targetMinutes),
+          search_skipped: true,
+          warning: err.message,
+        })
+      }
+
     }
 
     try {
