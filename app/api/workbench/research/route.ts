@@ -131,6 +131,53 @@ export async function POST(request: Request) {
     })
   } catch (err) {
     if (err instanceof ResearchTimeoutError) {
+      if (mode === 'snapshot') {
+        try {
+          const systemPrompt = `${buildSnapshotResearchSystemPrompt(targetMinutes)}
+
+網絡搜尋已超時。請改為產出「未核實 snapshot 草稿」，讓用家可以繼續測試流程。
+規則：
+- 所有 research_sources 必須標 verified:false。
+- source_url 一律填 "[需查核：網絡搜尋超時]"。
+- claim/value/comparison 必須用「約 / 估計 / 需查核」等 hedging 語氣。
+- 不要聲稱資料已由網絡查證。`
+          const userPrompt = buildResearchUserPrompt(thesis, material, channel as WorkbenchChannel)
+          const fallbackPrompt = await withTimeout(
+            anthropic.messages.create({
+              model: WORKBENCH_MODEL,
+              max_tokens: 1800,
+              system: systemPrompt,
+              messages: [
+                {
+                  role: 'user',
+                  content: `${userPrompt}\n\n請產出 4-6 條最適合測試 counterfactual snapshot framework 的未核實 snapshot candidates。`,
+                },
+              ],
+            }),
+            25_000
+          )
+          const raw = fallbackPrompt.content
+            .map((part) => ('text' in part ? part.text : ''))
+            .join('')
+            .trim()
+          const parsed = parseJson(raw)
+
+          return jsonUtf8({
+            research_sources: normalizeSnapshotSources(parsed?.research_sources),
+            flags: parsed ? normalizeFlags(parsed.flags) : buildFallbackFlags(thesis, material, targetMinutes),
+            search_skipped: true,
+            warning: err.message,
+          })
+        } catch {
+          return jsonUtf8({
+            research_sources: [],
+            flags: buildFallbackFlags(thesis, material, targetMinutes),
+            search_skipped: true,
+            warning: err.message,
+          })
+        }
+      }
+
       return jsonUtf8({
         research_sources: [],
         flags: buildFallbackFlags(thesis, material, targetMinutes),
